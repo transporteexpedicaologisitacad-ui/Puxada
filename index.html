@@ -227,8 +227,8 @@
 
     /* linha divisória entre "DADOS CARGA" e "LOCAL DA CARGA" */
     table.ordem-tabela thead tr:first-child th:nth-child(2){border-right:2px solid #000;}
-    table.ordem-tabela thead tr:last-child th:nth-child(7){border-right:2px solid #000;}
-    table.ordem-tabela tbody td:nth-child(8){border-right:2px solid #000;}
+    table.ordem-tabela thead tr:last-child th:nth-child(8){border-right:2px solid #000;}
+    table.ordem-tabela tbody td:nth-child(9){border-right:2px solid #000;}
 
     .badge{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
   }
@@ -380,11 +380,11 @@
         <thead>
           <tr>
             <th rowspan="2" style="width:22px;">#</th>
-            <th class="grupo" colspan="7">DADOS CARGA</th>
+            <th class="grupo" colspan="8">DADOS CARGA</th>
             <th class="grupo" colspan="6">LOCAL DA CARGA</th>
           </tr>
           <tr>
-            <th>Nº Carga</th><th>CD Exp.</th><th>Destino</th><th>Região</th><th>Valor</th><th>Peso</th><th>Vol</th>
+            <th>Nº Carga</th><th>CD Exp.</th><th>Destino</th><th>Região</th><th>Ent</th><th>Valor</th><th>Peso</th><th>Vol</th>
             <th>Box</th><th>Rua</th><th>Prédio</th><th>Pallet</th><th>Chep</th><th>Obs.</th>
           </tr>
         </thead>
@@ -676,7 +676,7 @@ function carregarOrdemMotorista(data, motorista){
   document.getElementById('mensagem-impressao').textContent = '';
   document.getElementById('meta-datahora').textContent = '—';
   document.getElementById('meta-numcontrole').textContent = '—';
-  document.getElementById('corpo-ordem').innerHTML = '<tr><td colspan="14">Carregando...</td></tr>';
+  document.getElementById('corpo-ordem').innerHTML = '<tr><td colspan="15">Carregando...</td></tr>';
 
   fetchJSON(API_URL + '?action=getCargasPorData&data=' + encodeURIComponent(data) + '&motorista=' + encodeURIComponent(motorista))
     .then(resp => {
@@ -692,7 +692,7 @@ function carregarOrdemMotorista(data, motorista){
       }
     })
     .catch(err => {
-      document.getElementById('corpo-ordem').innerHTML = '<tr><td colspan="14">Erro: ' + err.message + '</td></tr>';
+      document.getElementById('corpo-ordem').innerHTML = '<tr><td colspan="15">Erro: ' + err.message + '</td></tr>';
     });
 }
 
@@ -709,13 +709,13 @@ function renderizarOrdem(){
       html += `
         <tr>
           <td>${i+1}</td>
-          <td>${c.carga}</td><td>${c.filial || ''}</td><td>${c.destino}</td><td>${c.regiao}</td>
+          <td>${c.carga}</td><td>${c.filial || ''}</td><td>${c.destino}</td><td>${c.regiao}</td><td>${c.ent ?? ''}</td>
           <td>${formatarMoeda(c.valor)}</td><td>${c.peso}</td><td>${c.vol}</td>
           <td>${c.box || ''}</td><td>${c.rua || ''}</td><td>${c.predio || ''}</td>
           <td>${c.pallet || ''}</td><td>${c.chep || ''}</td><td>${c.obs || ''}</td>
         </tr>`;
     } else {
-      html += `<tr><td>${i+1}</td>${'<td>&nbsp;</td>'.repeat(13)}</tr>`;
+      html += `<tr><td>${i+1}</td>${'<td>&nbsp;</td>'.repeat(14)}</tr>`;
     }
   }
 
