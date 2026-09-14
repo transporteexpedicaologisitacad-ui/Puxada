@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Carregamento</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --azul:#0ea5e9; --azul-escuro:#0369a1; --verde:#188038; --amarelo:#f9ab00; --vermelho:#d93025;
+    --cinza-bg:#f4f6f8; --cinza-borda:#dcdfe3; --cinza-texto:#5f6368;
+    --tech-accent:#38bdf8; --tech-ok:#34d399; --tech-warn:#fbbf24;
+    --tech-text:#e6edf5; --tech-muted:#8493ac; --tech-linha:#1c2b45;
+    --mono:'JetBrains Mono',Consolas,'Courier New',monospace;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:'Segoe UI',Roboto,Arial,sans-serif;background:var(--cinza-bg);margin:0;padding:16px;color:#202124;}
+  a, button, input, .card-data, .card-motorista, .badge, .btn-voltar, .btn-imprimir{
+    transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease, background-color .15s ease, color .15s ease;
+  }
+  .icon{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;flex-shrink:0;}
+  .icon-lg{width:20px;height:20px;}
+  h1{font-size:20px;margin:0 0 4px;display:flex;align-items:center;gap:9px;}
+  h1 .icon{width:22px;height:22px;color:var(--azul);}
+  .subtitulo{font-size:12px;color:var(--cinza-texto);margin-bottom:16px;}
+  .breadcrumb{font-size:13px;color:var(--cinza-texto);margin-bottom:14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .breadcrumb a{color:var(--azul);text-decoration:none;cursor:pointer;font-weight:600;padding:2px 4px;border-radius:4px;}
+  .breadcrumb a:hover{background:#e8f4fd;}
+  .breadcrumb .icon{color:#b6bcc4;width:13px;height:13px;}
+  .card{background:#fff;border:1px solid var(--cinza-borda);border-radius:8px;padding:18px;margin-bottom:16px;}
+  .oculto{display:none !important;}
+
+  /* ---------- Tela 1: datas (painel hi-tech) ---------- */
+  #tela1.painel-tech{
+    background:linear-gradient(180deg,#0b1220 0%,#111d33 100%);
+    border:1px solid var(--tech-linha);border-radius:10px;padding:0;overflow:hidden;
+    box-shadow:0 10px 26px rgba(6,12,24,.35);
+  }
+  .painel-tech-scan{
+    height:3px;width:100%;background:linear-gradient(90deg,transparent,var(--tech-accent),transparent);
+    background-size:200% 100%;animation:varrer 3.6s linear infinite;
+  }
+  @media(prefers-reduced-motion:reduce){.painel-tech-scan{animation:none;}}
+  @keyframes varrer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+  .painel-tech-header{padding:18px 20px 12px;display:flex;align-items:center;gap:10px;}
+  .painel-tech-header h2{margin:0;font-size:17px;font-weight:700;color:var(--tech-text);}
+  .painel-tech-header .painel-tech-sub{font-size:12px;color:var(--tech-muted);margin-top:3px;}
+  .btn-mes-voltar{
+    background:transparent;border:1px solid #2a3c5c;color:var(--tech-accent);border-radius:6px;
+    width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
+  }
+  .btn-mes-voltar:hover{background:rgba(56,189,248,.12);border-color:var(--tech-accent);}
+  .btn-mes-voltar .icon{width:15px;height:15px;color:var(--tech-accent);vertical-align:0;}
+
+  .grid-datas{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;padding:2px 20px 20px;}
+  .card-data{
+    position:relative;border:1px solid #22314d;border-left:3px solid var(--tech-accent);
+    border-radius:8px;padding:14px 16px;cursor:pointer;background:#101b30;
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+  .card-data:hover{
+    transform:translateY(-3px);border-color:var(--tech-accent);
+    box-shadow:0 12px 24px rgba(56,189,248,.18), 0 0 0 1px rgba(56,189,248,.3) inset;
+  }
+  .card-data .cd-topo{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .card-data .dia{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--tech-accent);letter-spacing:.3px;}
+  .card-data .cd-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .card-data .cd-dot.ok{background:var(--tech-ok);box-shadow:0 0 8px var(--tech-ok);}
+  .card-data .cd-dot.pend{background:var(--tech-warn);box-shadow:0 0 8px var(--tech-warn);}
+  .card-data .semana{font-size:11.5px;color:var(--tech-muted);text-transform:capitalize;margin:3px 0 12px;}
+  .card-data .resumo{display:flex;gap:20px;}
+  .card-data .resumo div{display:flex;flex-direction:column;gap:1px;}
+  .card-data .resumo b{font-family:var(--mono);font-size:15px;color:var(--tech-text);}
+  .card-data .resumo span{font-size:10.5px;color:var(--tech-muted);}
+  .card-data .cd-emitidas{
+    margin-top:12px;font-size:11px;color:var(--tech-muted);border-top:1px solid var(--tech-linha);padding-top:8px;
+  }
+  .card-data .cd-emitidas b{color:var(--tech-text);font-family:var(--mono);font-weight:600;}
+
+  /* ---------- Tela 2: motoristas + visão geral ---------- */
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap;}
+  .campo-busca{position:relative;}
+  .campo-busca .icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--cinza-texto);}
+  .toolbar input[type=text]{padding:8px 10px 8px 32px;border:1px solid var(--cinza-borda);border-radius:6px;width:240px;font-size:13px;}
+  .toolbar input[type=text]:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px rgba(14,165,233,.15);}
+  .toolbar button{background:#fff;border:1px solid var(--cinza-borda);border-radius:6px;padding:7px 12px;cursor:pointer;font-size:13px;}
+
+  .grid-motoristas{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:20px;}
+  .card-motorista{
+    position:relative;border:1px solid var(--cinza-borda);border-left:3px solid var(--azul);
+    border-radius:8px;padding:14px;cursor:pointer;background:#fff;
+  }
+  .card-motorista:hover{
+    border-color:var(--azul);transform:translateY(-3px);
+    box-shadow:0 10px 20px rgba(14,165,233,.16);
+  }
+  .card-motorista .nome{font-weight:700;font-size:14px;margin-bottom:8px;display:flex;align-items:center;gap:7px;}
+  .card-motorista .nome .icon{color:var(--azul);}
+  .card-motorista .linha-info{font-size:12px;color:var(--cinza-texto);display:flex;align-items:center;gap:6px;justify-content:space-between;margin-top:4px;}
+  .card-motorista .linha-info .rotulo{display:flex;align-items:center;gap:6px;}
+  .card-motorista .linha-info .icon{color:#9aa0a6;}
+  .card-motorista .linha-info b{font-family:var(--mono);color:#202124;}
+  .card-motorista .status-linha{display:flex;align-items:center;gap:7px;margin-top:10px;padding-top:9px;border-top:1px dashed var(--cinza-borda);}
+  .card-motorista .status-dot{width:8px;height:8px;border-radius:50%;}
+  .card-motorista .status-dot.ok{background:var(--verde);box-shadow:0 0 6px rgba(24,128,56,.5);}
+  .card-motorista .status-dot.pend{background:#9aa0a6;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th,td{padding:7px 9px;border-bottom:1px solid var(--cinza-borda);text-align:left;white-space:nowrap;}
+  th{background:#f1f3f4;position:sticky;top:0;}
+  tbody tr{transition:background-color .12s ease;}
+  tbody tr:nth-child(even){background:#fafbfc;}
+  tbody tr:hover{background:#eaf6fe;}
+  .tabela-wrap{max-height:55vh;overflow:auto;border:1px solid var(--cinza-borda);border-radius:6px;}
+
+  .badge{padding:3px 9px;border-radius:12px;font-size:10.5px;font-weight:600;color:#fff;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;}
+  .badge .icon{width:12px;height:12px;}
+  .badge.emitido{background:var(--verde);}
+  .badge.pendente{background:#9aa0a6;}
+
+  /* ---------- Tela 3: ordem de carregamento ---------- */
+  .painel-3-layout{display:grid;grid-template-columns:280px 1fr;gap:18px;}
+  @media(max-width:900px){.painel-3-layout{grid-template-columns:1fr;}}
+  .painel-3-layout label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--cinza-texto);margin:10px 0 4px;}
+  .painel-3-layout label .icon{color:var(--azul);}
+  .painel-3-layout input{width:100%;padding:8px 10px;border:1px solid var(--cinza-borda);border-radius:6px;font-size:14px;}
+  .painel-3-layout input:focus{outline:none;border-color:var(--azul);box-shadow:0 0 0 3px rgba(14,165,233,.15);}
+  .assinatura-linha{margin-top:40px;border-top:1px solid #333;padding-top:6px;font-size:11px;text-align:center;color:var(--cinza-texto);}
+
+  .ordem-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+  .ordem-header h2{margin:0;font-size:17px;display:flex;align-items:center;gap:8px;}
+  .ordem-header h2 .icon{color:var(--azul);}
+  .ordem-header .meta{font-size:12px;text-align:right;color:var(--cinza-texto);}
+  .ordem-header .meta b{color:#202124;}
+
+  table.ordem-tabela th, table.ordem-tabela td{font-size:11.5px;padding:5px 6px;}
+  table.ordem-tabela th.grupo{text-align:center;background:#e8eaed;}
+
+  .totais{display:flex;gap:24px;margin-top:10px;font-size:12.5px;font-weight:600;}
+  .totais span{display:inline-flex;align-items:center;gap:6px;}
+  .totais .icon{color:var(--azul);}
+  .totais span b{color:var(--azul);font-family:var(--mono);}
+
+  .btn-imprimir{
+    margin-top:16px;background:var(--azul);color:#fff;border:none;border-radius:6px;
+    padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn-imprimir:hover:not(:disabled){background:var(--azul-escuro);transform:translateY(-1px);box-shadow:0 6px 14px rgba(14,165,233,.3);}
+  .btn-imprimir:disabled{background:#9aa0a6;cursor:not-allowed;}
+  .btn-voltar{
+    background:#fff;border:1px solid var(--cinza-borda);border-radius:6px;padding:7px 12px;cursor:pointer;
+    font-size:13px;margin-right:8px;display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn-voltar:hover{border-color:var(--azul);color:var(--azul);transform:translateX(-2px);}
+
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:girar .7s linear infinite;vertical-align:middle;margin-right:6px;}
+  @keyframes girar{to{transform:rotate(360deg);}}
+
+  #config-alerta{background:#fef7e0;border:1px solid var(--amarelo);color:#7a5b00;padding:10px 12px;border-radius:6px;font-size:13px;margin-bottom:14px;display:none;}
+
+  /* ---------- FICHA MANUSCRITA (somente impressão) ---------- */
+  .ficha-manual-print{ display:none; }
+
+  /* ---------- IMPRESSÃO ---------- */
+  @media print{
+    @page{ size: portrait; margin: 12mm 14mm; }
+
+    body{background:#fff;padding:0;}
+    .icon{display:none !important;}
+    #tela1, #tela2, .toolbar, .btn-imprimir, .btn-voltar, .breadcrumb, h1, .subtitulo, #config-alerta { display:none !important; }
+    .card{border:none;padding:0;}
+
+    /* título destacado e centralizado */
+    .ordem-header{display:block;text-align:center;margin-bottom:6px;}
+    .ordem-header h2{
+      display:inline-block;font-size:21px;font-weight:800;letter-spacing:.4px;
+      text-transform:uppercase;margin:0 0 8px;padding-bottom:6px;border-bottom:2px solid #000;
+    }
+    .ordem-header .meta{text-align:center;font-size:12px;margin:0 auto;}
+
+    /* layout em coluna única, empilhado (retrato) */
+    #tela3{display:flex;flex-direction:column;}
+    #tela3 > .ordem-header{order:1;}
+    #tela3 > .painel-3-layout{order:2;display:block;}
+    #tela3 > .ficha-manual-print{order:3;}
+    #coluna-info-motorista{display:none;} /* substituída pela ficha manuscrita no rodapé */
+
+    /* dentro da coluna de cargas: totais primeiro, tabela depois */
+    #coluna-cargas{display:flex;flex-direction:column;}
+    #coluna-cargas > .totais{order:1;}
+    #coluna-cargas > table.ordem-tabela{order:2;}
+
+    /* resumo dos totais logo abaixo do cabeçalho, acima da tabela */
+    .totais{
+      display:flex;justify-content:space-between;gap:10px;font-size:12px;
+      margin:4px 0 10px;padding:6px 10px;border-top:1px solid #000;border-bottom:1px solid #000;
+    }
+
+    /* ficha nos moldes da imagem de referência (preenchimento manual), no rodapé */
+    .ficha-manual-print{
+      display:block;border:2px solid #000;border-radius:6px;
+      padding:14px 26px 18px;margin:16px 0 0;width:100%;
+    }
+    .ficha-linha{
+      display:flex;align-items:baseline;gap:10px;margin-bottom:16px;font-size:14px;
+    }
+    .ficha-linha:last-of-type{margin-bottom:0;}
+    .ficha-label{font-weight:700;white-space:nowrap;}
+    .ficha-valor{
+      flex:1;border-bottom:1px solid #000;min-height:17px;padding:0 4px 3px;
+      font-weight:600;white-space:nowrap;overflow:hidden;
+    }
+    .ficha-valor-vazio{flex:1;border-bottom:1px solid #000;min-height:17px;}
+    .ficha-assinatura{margin-top:30px;text-align:center;}
+    .ficha-assinatura .linha-assinatura{border-top:1px solid #000;width:45%;margin:0 auto 4px;}
+    .ficha-assinatura .legenda-assinatura{font-size:11.5px;color:#000;}
+
+    /* tabela de cargas: fonte maior (ainda sem quebra de linha) + divisória entre os grupos */
+    table.ordem-tabela{width:100%;table-layout:auto;}
+    table.ordem-tabela th, table.ordem-tabela td{
+      font-size:9.5px;padding:3px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    table.ordem-tabela th{background:#eee !important; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    table.ordem-tabela th.grupo{font-size:10px;padding:5px;}
+
+    /* linha divisória entre "DADOS CARGA" e "LOCAL DA CARGA" */
+    table.ordem-tabela thead tr:first-child th:nth-child(2){border-right:2px solid #000;}
+    table.ordem-tabela thead tr:last-child th:nth-child(7){border-right:2px solid #000;}
+    table.ordem-tabela tbody td:nth-child(8){border-right:2px solid #000;}
+
+    .badge{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  }
+</style>
+</head>
+<body>
+
+<h1>
+  <svg class="icon" viewBox="0 0 24 24"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>
+  Painel de Carregamento e Expedição
+</h1>
+<div class="subtitulo">Selecione a data, depois o motorista, para emitir a Ordem de Carregamento</div>
+<div id="config-alerta">⚠️ Configure a constante <b>API_URL</b> no início do script deste arquivo.</div>
+
+<div class="breadcrumb" id="breadcrumb"></div>
+
+<!-- ============ TELA 1: DATAS ============ -->
+<div id="tela1" class="card painel-tech">
+  <div class="painel-tech-scan"></div>
+  <div class="painel-tech-header" id="tela1-header">
+    <h2>Datas de expedição</h2>
+  </div>
+  <div class="grid-datas" id="grid-datas">
+    <div style="color:#8493ac;padding:0 20px 20px;">Carregando datas...</div>
+  </div>
+</div>
+
+<!-- ============ TELA 2: MOTORISTAS DO DIA + VISÃO GERAL ============ -->
+<div id="tela2" class="card oculto">
+  <button class="btn-voltar" onclick="irParaTela1()">
+    <svg class="icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    Voltar às datas
+  </button>
+  <h2 style="font-size:15px;color:var(--azul);margin:14px 0 10px;display:flex;align-items:center;gap:7px;">
+    <svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15 14c2.8.3 5 2.4 5 5"/></svg>
+    Motoristas do dia <span id="titulo-data"></span>
+  </h2>
+  <div class="grid-motoristas" id="grid-motoristas"></div>
+
+  <div class="toolbar">
+    <h2 style="margin:0;font-size:15px;color:var(--azul);display:flex;align-items:center;gap:7px;">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+      Visão geral — todas as cargas do dia
+    </h2>
+    <div class="campo-busca">
+      <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="filtro-geral" placeholder="Buscar carga, destino ou motorista...">
+    </div>
+  </div>
+  <div class="tabela-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Carga</th><th>Motorista</th><th>Destino</th><th>Região</th>
+          <th>Valor</th><th>Peso</th><th>Vol</th><th>Box</th><th>Rua</th><th>Prédio</th>
+          <th>Status Carga</th><th>Emissão</th>
+        </tr>
+      </thead>
+      <tbody id="corpo-tabela-geral"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============ TELA 3: ORDEM DE CARREGAMENTO ============ -->
+<div id="tela3" class="card oculto">
+  <button class="btn-voltar" onclick="irParaTela2()">
+    <svg class="icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    Voltar aos motoristas
+  </button>
+
+  <div class="ordem-header" style="margin-top:14px;">
+    <h2>
+      <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+      Ordem de Carregamento e Expedição
+    </h2>
+    <div class="meta">
+      Data e Hora Emissão: <b id="meta-datahora">—</b><br>
+      Nº Controle: <b id="meta-numcontrole">—</b>
+    </div>
+  </div>
+
+  <!-- Ficha manuscrita (aparece SOMENTE na impressão), no formato da imagem de referência -->
+  <div class="ficha-manual-print">
+    <div class="ficha-linha">
+      <span class="ficha-label">Nome do Motorista:</span>
+      <span class="ficha-valor" id="print-motorista"></span>
+    </div>
+    <div class="ficha-linha">
+      <span class="ficha-label">Data do Carregamento:</span>
+      <span class="ficha-valor" id="print-data"></span>
+    </div>
+    <div class="ficha-linha">
+      <span class="ficha-label">Placa do Veículo:</span>
+      <span class="ficha-valor-vazio"></span>
+    </div>
+    <div class="ficha-linha">
+      <span class="ficha-label">Nome do Carregador:</span>
+      <span class="ficha-valor-vazio"></span>
+    </div>
+    <div class="ficha-linha">
+      <span class="ficha-label">BOX:</span>
+      <span class="ficha-valor-vazio"></span>
+    </div>
+    <div class="ficha-assinatura">
+      <div class="linha-assinatura"></div>
+      <div class="legenda-assinatura">Assinatura do Motorista</div>
+    </div>
+  </div>
+
+  <div class="painel-3-layout">
+    <!-- Dados do motorista -->
+    <div id="coluna-info-motorista">
+      <label>
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+        Nome Motorista
+      </label>
+      <input type="text" id="campo-motorista" readonly>
+
+      <label>
+        <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Data do Carregamento
+      </label>
+      <input type="text" id="campo-data" readonly>
+
+      <label>
+        <svg class="icon" viewBox="0 0 24 24"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>
+        Placa do Veículo
+      </label>
+      <input type="text" id="campo-placa" placeholder="Ex: ABC1D23">
+
+      <label>
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+        Nome do Carregador
+      </label>
+      <input type="text" id="campo-carregador" placeholder="Nome de quem carregou">
+
+      <div class="assinatura-linha">Assinatura legível do motorista</div>
+
+      <button class="btn-imprimir" id="btn-imprimir">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1"/><path d="M6 17h12v4H6z"/></svg>
+        Imprimir Ordem de Carregamento
+      </button>
+      <div id="mensagem-impressao" style="margin-top:8px;font-size:12px;"></div>
+    </div>
+
+    <!-- Dados das cargas -->
+    <div id="coluna-cargas">
+      <table class="ordem-tabela">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:22px;">#</th>
+            <th class="grupo" colspan="7">DADOS CARGA</th>
+            <th class="grupo" colspan="6">LOCAL DA CARGA</th>
+          </tr>
+          <tr>
+            <th>Nº Carga</th><th>CD Exp.</th><th>Destino</th><th>Região</th><th>Valor</th><th>Peso</th><th>Vol</th>
+            <th>Box</th><th>Rua</th><th>Prédio</th><th>Pallet</th><th>Chep</th><th>Obs.</th>
+          </tr>
+        </thead>
+        <tbody id="corpo-ordem"></tbody>
+      </table>
+
+      <div class="totais">
+        <span>
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-3 7a3 3 0 0 0 6 0z"/><path d="M19 7l-3 7a3 3 0 0 0 6 0z"/></svg>
+          Peso da Carga: <b id="total-peso">0</b>
+        </span>
+        <span>
+          <svg class="icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+          Vol da Carga: <b id="total-vol">0</b>
+        </span>
+        <span>
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 15.5c.5 1 1.4 1.5 2.5 1.5 1.7 0 3-1 3-2.3 0-1.5-1.3-2-3-2.3-1.7-.3-3-1-3-2.4C9 8.9 10.3 8 12 8c1.1 0 2 .5 2.5 1.5"/><line x1="12" y1="6.5" x2="12" y2="17.5"/></svg>
+          Vl da Carga: <b id="total-valor">R$ 0,00</b>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+ * CONFIGURAÇÃO — cole aqui a URL do Web App do Apps Script
+ * (o mesmo projeto onde está o Code_Painel_Carregamento.gs)
+ * ========================================================= */
+const API_URL = 'https://script.google.com/macros/s/AKfycbzfJE7vIURh8Rtg7oqvPajLAYI8DjFOcd2jlovFagzoDqwhU95ah2x8zgC6vu0AEQbp6A/exec';
+
+if (!API_URL || API_URL.indexOf('COLE AQUI') > -1) {
+  document.getElementById('config-alerta').style.display = 'block';
+}
+
+let estado = { data: null, motorista: null, cargas: [], gruposMeses: [], mesAtual: null };
+
+document.addEventListener('DOMContentLoaded', carregarDatas);
+
+const ICONE_CHEVRON = '<svg class="icon" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
+
+/* ---------------- helper: fetch com validação de resposta JSON ----------------
+ * O Apps Script às vezes responde com uma página HTML (login, erro, redirecionamento)
+ * em vez de JSON — por exemplo quando a implantação do Web App está desatualizada,
+ * sem permissão de acesso "Qualquer pessoa", ou sem função doPost. Esse helper
+ * detecta esse caso e mostra uma mensagem explicando o que verificar, em vez do
+ * erro cru "Unexpected token '<' ...". */
+function fetchJSON(url, options){
+  return fetch(url, options).then(r => {
+    return r.text().then(texto => {
+      let dados;
+      try {
+        dados = JSON.parse(texto);
+      } catch (e) {
+        const amostra = texto.trim().slice(0, 120).replace(/\s+/g, ' ');
+        throw new Error(
+          'O servidor não devolveu JSON (recebido: "' + amostra + '..."). ' +
+          'Provável causa: a implantação do Web App (Apps Script) está desatualizada, ' +
+          'sem acesso "Qualquer pessoa" ou sem a função doPost/doGet correspondente. ' +
+          'Publique uma nova implantação (Implantar → Gerenciar implantações → Nova versão) e tente novamente.'
+        );
+      }
+      if (!r.ok) {
+        throw new Error('HTTP ' + r.status + ': ' + (dados && dados.erro ? dados.erro : r.statusText));
+      }
+      return dados;
+    });
+  });
+}
+
+/* ---------------- navegação entre telas ---------------- */
+function irParaTela1(){
+  document.getElementById('tela1').classList.remove('oculto');
+  document.getElementById('tela2').classList.add('oculto');
+  document.getElementById('tela3').classList.add('oculto');
+  document.getElementById('breadcrumb').textContent = '';
+  carregarDatas();
+}
+function irParaTela2(){
+  document.getElementById('tela1').classList.add('oculto');
+  document.getElementById('tela2').classList.remove('oculto');
+  document.getElementById('tela3').classList.add('oculto');
+  carregarMotoristasEGeral(estado.data);
+}
+function irParaTela3(motorista){
+  estado.motorista = motorista;
+  document.getElementById('tela1').classList.add('oculto');
+  document.getElementById('tela2').classList.add('oculto');
+  document.getElementById('tela3').classList.remove('oculto');
+  document.getElementById('breadcrumb').innerHTML =
+    '<a onclick="irParaTela1()">Datas</a>' + ICONE_CHEVRON +
+    '<a onclick="irParaTela2()">' + estado.data + '</a>' + ICONE_CHEVRON +
+    '<span>' + motorista + '</span>';
+  carregarOrdemMotorista(estado.data, motorista);
+}
+
+/* ---------------- TELA 1: datas (agrupadas por mês) ---------------- */
+const NOMES_MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function parseDataBR(str){
+  const [d, m, y] = str.split('/').map(Number);
+  return { d, m, y, ordenavel: y * 10000 + m * 100 + d };
+}
+
+function agruparPorMes(datas){
+  const grupos = {};
+  datas.forEach(item => {
+    const p = parseDataBR(item.data);
+    const chave = p.y + '-' + String(p.m).padStart(2, '0');
+    if (!grupos[chave]) {
+      grupos[chave] = { chave, ano: p.y, mes: p.m, label: NOMES_MESES[p.m - 1] + ' de ' + p.y, dias: [] };
+    }
+    grupos[chave].dias.push(item);
+  });
+  return Object.values(grupos).sort((a, b) => (a.ano * 100 + a.mes) - (b.ano * 100 + b.mes));
+}
+
+function renderCabecalhoTela1(mesLabel){
+  const header = document.getElementById('tela1-header');
+  header.innerHTML = mesLabel
+    ? `<button class="btn-mes-voltar" onclick="voltarMeses()" title="Voltar aos meses">
+         <svg class="icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+       </button><h2>${mesLabel}</h2>`
+    : `<h2>Datas de expedição</h2>`;
+}
+
+function carregarDatas(){
+  document.getElementById('grid-datas').innerHTML = '<div style="color:#8493ac;padding:0 20px 20px;">Carregando datas...</div>';
+  fetchJSON(API_URL + '?action=getDatas')
+    .then(resp => {
+      if (!resp.ok) throw new Error(resp.erro);
+      if (!resp.datas.length) {
+        renderCabecalhoTela1(null);
+        document.getElementById('grid-datas').innerHTML = '<div style="color:#8493ac;padding:0 20px 20px;">Nenhuma data encontrada.</div>';
+        return;
+      }
+      estado.gruposMeses = agruparPorMes(resp.datas);
+      estado.mesAtual = null;
+      renderGridMeses();
+    })
+    .catch(err => {
+      renderCabecalhoTela1(null);
+      document.getElementById('grid-datas').innerHTML = '<div style="color:#fca5a5;padding:0 20px 20px;">Erro ao carregar: ' + err.message + '</div>';
+    });
+}
+
+function renderGridMeses(){
+  renderCabecalhoTela1(null);
+  const grid = document.getElementById('grid-datas');
+  grid.innerHTML = estado.gruposMeses.map(g => {
+    const totalCargas = g.dias.reduce((s, d) => s + d.qtdCargas, 0);
+    const totalEmitidas = g.dias.reduce((s, d) => s + d.qtdEmitidas, 0);
+    return `
+      <div class="card-data" onclick="abrirMes('${g.chave}')">
+        <div class="cd-topo">
+          <span class="dia">${g.label}</span>
+          <span class="cd-dot ${totalEmitidas === totalCargas && totalCargas > 0 ? 'ok' : 'pend'}"></span>
+        </div>
+        <div class="semana">${g.dias.length} ${g.dias.length > 1 ? 'dias' : 'dia'} com expedição</div>
+        <div class="resumo">
+          <div><b>${totalCargas}</b><span>cargas</span></div>
+          <div><b>${g.dias.length}</b><span>datas</span></div>
+        </div>
+        <div class="cd-emitidas"><b>${totalEmitidas}</b> emitidas</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function abrirMes(chave){
+  estado.mesAtual = chave;
+  const grupo = estado.gruposMeses.find(g => g.chave === chave);
+  if (!grupo) return;
+  renderCabecalhoTela1(grupo.label);
+  const grid = document.getElementById('grid-datas');
+  grid.innerHTML = grupo.dias
+    .sort((a, b) => parseDataBR(a.data).ordenavel - parseDataBR(b.data).ordenavel)
+    .map(d => `
+      <div class="card-data" onclick="selecionarData('${d.data}')">
+        <div class="cd-topo">
+          <span class="dia">${d.data}</span>
+          <span class="cd-dot ${d.qtdEmitidas === d.qtdCargas && d.qtdCargas > 0 ? 'ok' : 'pend'}"></span>
+        </div>
+        <div class="semana">${d.diaSemana || ''}</div>
+        <div class="resumo">
+          <div><b>${d.qtdCargas}</b><span>cargas</span></div>
+          <div><b>${d.qtdMotoristas}</b><span>motoristas</span></div>
+        </div>
+        <div class="cd-emitidas"><b>${d.qtdEmitidas}</b> emitidas</div>
+      </div>
+    `).join('');
+}
+
+function voltarMeses(){
+  estado.mesAtual = null;
+  renderGridMeses();
+}
+
+function selecionarData(data){
+  estado.data = data;
+  document.getElementById('breadcrumb').innerHTML = '<a onclick="irParaTela1()">Datas</a>' + ICONE_CHEVRON + '<span>' + data + '</span>';
+  document.getElementById('titulo-data').textContent = '— ' + data;
+  irParaTela2();
+}
+
+/* ---------------- TELA 2: motoristas + visão geral ---------------- */
+function carregarMotoristasEGeral(data){
+  document.getElementById('grid-motoristas').innerHTML = 'Carregando...';
+  document.getElementById('corpo-tabela-geral').innerHTML = '<tr><td colspan="12">Carregando...</td></tr>';
+
+  fetchJSON(API_URL + '?action=getMotoristasPorData&data=' + encodeURIComponent(data))
+    .then(resp => {
+      if (!resp.ok) throw new Error(resp.erro);
+      const grid = document.getElementById('grid-motoristas');
+      if (!resp.motoristas.length) { grid.innerHTML = '<div>Nenhum motorista nesta data.</div>'; return; }
+      grid.innerHTML = resp.motoristas.map(m => `
+        <div class="card-motorista" onclick="irParaTela3('${m.motorista.replace(/'/g,"\\'")}')">
+          <div class="nome">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>
+            ${m.motorista || '(sem nome)'}
+          </div>
+          <div class="linha-info">
+            <span class="rotulo"><svg class="icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>Cargas</span>
+            <b>${m.qtdCargas}</b>
+          </div>
+          <div class="linha-info">
+            <span class="rotulo"><svg class="icon" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M5 7h14"/><path d="M5 7l-3 7a3 3 0 0 0 6 0z"/><path d="M19 7l-3 7a3 3 0 0 0 6 0z"/></svg>Peso total</span>
+            <b>${m.totalPeso.toFixed(2)}</b>
+          </div>
+          <div class="linha-info">
+            <span class="rotulo"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Vol total</span>
+            <b>${m.totalVol.toFixed(2)}</b>
+          </div>
+          <div class="status-linha">
+            <span class="status-dot ${m.qtdEmitidas === m.qtdCargas && m.qtdCargas > 0 ? 'ok' : 'pend'}"></span>
+            <span style="font-size:11.5px;color:var(--cinza-texto);">${m.qtdEmitidas} emitidas</span>
+          </div>
+        </div>
+      `).join('');
+    })
+    .catch(err => {
+      document.getElementById('grid-motoristas').innerHTML = 'Erro: ' + err.message;
+    });
+
+  fetchJSON(API_URL + '?action=getCargasPorData&data=' + encodeURIComponent(data))
+    .then(resp => {
+      if (!resp.ok) throw new Error(resp.erro);
+      estado.cargasGeral = resp.cargas;
+      renderizarTabelaGeral();
+    })
+    .catch(err => {
+      document.getElementById('corpo-tabela-geral').innerHTML = '<tr><td colspan="12">Erro: ' + err.message + '</td></tr>';
+    });
+}
+document.getElementById('filtro-geral').addEventListener('input', renderizarTabelaGeral);
+
+function renderizarTabelaGeral(){
+  const filtro = document.getElementById('filtro-geral').value.trim().toLowerCase();
+  const lista = (estado.cargasGeral || []).filter(c =>
+    !filtro ||
+    String(c.carga).toLowerCase().includes(filtro) ||
+    String(c.destino).toLowerCase().includes(filtro) ||
+    String(c.motorista).toLowerCase().includes(filtro)
+  );
+  const corpo = document.getElementById('corpo-tabela-geral');
+  if (!lista.length){ corpo.innerHTML = '<tr><td colspan="12">Nenhuma carga encontrada.</td></tr>'; return; }
+
+  corpo.innerHTML = lista.map(c => `
+    <tr>
+      <td>${c.carga}</td><td>${c.motorista}</td><td>${c.destino}</td><td>${c.regiao}</td>
+      <td>${formatarMoeda(c.valor)}</td><td>${c.peso}</td><td>${c.vol}</td>
+      <td>${c.box || ''}</td><td>${c.rua || ''}</td><td>${c.predio || ''}</td>
+      <td>${c.statusCarga || ''}</td>
+      <td>${c.statusImpressao === 'EMITIDO'
+            ? '<span class="badge emitido"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="8 12 11 15 16 9"/></svg>EMITIDO</span>'
+            : '<span class="badge pendente"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>PENDENTE</span>'}</td>
+    </tr>
+  `).join('');
+}
+
+/* ---------------- TELA 3: ordem de carregamento ---------------- */
+function carregarOrdemMotorista(data, motorista){
+  document.getElementById('campo-motorista').value = motorista;
+  document.getElementById('campo-data').value = data;
+  document.getElementById('campo-placa').value = '';
+  document.getElementById('campo-carregador').value = '';
+  document.getElementById('print-motorista').textContent = motorista;
+  document.getElementById('print-data').textContent = data;
+  document.getElementById('mensagem-impressao').textContent = '';
+  document.getElementById('meta-datahora').textContent = '—';
+  document.getElementById('meta-numcontrole').textContent = '—';
+  document.getElementById('corpo-ordem').innerHTML = '<tr><td colspan="14">Carregando...</td></tr>';
+
+  fetchJSON(API_URL + '?action=getCargasPorData&data=' + encodeURIComponent(data) + '&motorista=' + encodeURIComponent(motorista))
+    .then(resp => {
+      if (!resp.ok) throw new Error(resp.erro);
+      estado.cargas = resp.cargas;
+      renderizarOrdem();
+
+      // se já estava tudo emitido antes, mostra os dados da última emissão
+      const jaEmitido = resp.cargas.find(c => c.statusImpressao === 'EMITIDO');
+      if (jaEmitido) {
+        document.getElementById('meta-datahora').textContent = jaEmitido.dataHoraEmissao || '—';
+        document.getElementById('meta-numcontrole').textContent = jaEmitido.numControle || '—';
+      }
+    })
+    .catch(err => {
+      document.getElementById('corpo-ordem').innerHTML = '<tr><td colspan="14">Erro: ' + err.message + '</td></tr>';
+    });
+}
+
+function renderizarOrdem(){
+  const linhas = estado.cargas || [];
+  const totalLinhas = Math.max(linhas.length, 15); // sempre mostra ao menos 15 linhas, como o modelo impresso
+  let html = '';
+  let somaPeso = 0, somaVol = 0, somaValor = 0;
+
+  for (let i = 0; i < totalLinhas; i++){
+    const c = linhas[i];
+    if (c) {
+      somaPeso += c.peso; somaVol += c.vol; somaValor += c.valor;
+      html += `
+        <tr>
+          <td>${i+1}</td>
+          <td>${c.carga}</td><td>${c.filial || ''}</td><td>${c.destino}</td><td>${c.regiao}</td>
+          <td>${formatarMoeda(c.valor)}</td><td>${c.peso}</td><td>${c.vol}</td>
+          <td>${c.box || ''}</td><td>${c.rua || ''}</td><td>${c.predio || ''}</td>
+          <td>${c.pallet || ''}</td><td>${c.chep || ''}</td><td>${c.obs || ''}</td>
+        </tr>`;
+    } else {
+      html += `<tr><td>${i+1}</td>${'<td>&nbsp;</td>'.repeat(13)}</tr>`;
+    }
+  }
+
+  document.getElementById('corpo-ordem').innerHTML = html;
+  document.getElementById('total-peso').textContent = somaPeso.toFixed(2);
+  document.getElementById('total-vol').textContent = somaVol.toFixed(2);
+  document.getElementById('total-valor').textContent = formatarMoeda(somaValor);
+}
+
+function formatarMoeda(v){
+  return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+/* ---------------- Botão Imprimir: marca EMITIDO + imprime ---------------- */
+document.getElementById('btn-imprimir').addEventListener('click', function(){
+  const btn = this;
+  const msg = document.getElementById('mensagem-impressao');
+  const linhasParaMarcar = (estado.cargas || []).map(c => c.linha);
+
+  if (!linhasParaMarcar.length){
+    msg.textContent = 'Nenhuma carga para imprimir.';
+    msg.style.color = 'var(--vermelho)';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Gerando...';
+
+  fetchJSON(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      acao: 'marcarEmitido',
+      linhas: linhasParaMarcar,
+      data: estado.data,
+      motorista: estado.motorista
+    })
+  })
+    .then(resp => {
+      if (!resp.ok) throw new Error(resp.erro);
+      document.getElementById('meta-datahora').textContent = resp.resultado.dataHoraEmissao;
+      document.getElementById('meta-numcontrole').textContent = resp.resultado.numControle;
+      msg.textContent = '✅ Marcado como EMITIDO. Abrindo impressão...';
+      msg.style.color = 'var(--verde)';
+      setTimeout(() => window.print(), 300);
+    })
+    .catch(err => {
+      msg.textContent = '❌ Erro: ' + err.message;
+      msg.style.color = 'var(--vermelho)';
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1"/><path d="M6 17h12v4H6z"/></svg> Imprimir Ordem de Carregamento';
+    });
+});
+</script>
+</body>
+</html>
