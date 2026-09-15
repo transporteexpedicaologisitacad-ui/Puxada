@@ -102,10 +102,29 @@
   .card-motorista .linha-info .rotulo{display:flex;align-items:center;gap:6px;}
   .card-motorista .linha-info .icon{color:#9aa0a6;}
   .card-motorista .linha-info b{font-family:var(--mono);color:#202124;}
-  .card-motorista .status-linha{display:flex;align-items:center;gap:7px;margin-top:10px;padding-top:9px;border-top:1px dashed var(--cinza-borda);}
+  .card-motorista .status-linha{display:flex;align-items:center;gap:7px;margin-top:10px;padding-top:9px;border-top:1px dashed rgba(0,0,0,.12);}
   .card-motorista .status-dot{width:8px;height:8px;border-radius:50%;}
   .card-motorista .status-dot.ok{background:var(--verde);box-shadow:0 0 6px rgba(24,128,56,.5);}
   .card-motorista .status-dot.pend{background:#9aa0a6;}
+
+  /* Card totalmente EMITIDO — verde claro metálico */
+  .card-motorista.status-ok{
+    border-left-color:#0f9d58;
+    background:linear-gradient(120deg,#f2fff6 0%,#d3f5df 22%,#eafcf1 38%,#bdeecb 52%,#eafcf1 68%,#d3f5df 84%,#f2fff6 100%);
+  }
+  .card-motorista.status-ok:hover{border-color:#0f9d58;box-shadow:0 10px 22px rgba(15,157,88,.22);}
+  .card-motorista.status-ok .status-dot.ok{background:#0f9d58;box-shadow:0 0 6px rgba(15,157,88,.6);}
+  .card-motorista.status-ok .status-linha{border-top-color:rgba(15,157,88,.25);}
+
+  /* Card com cargas PENDENTES de emissão — dourado */
+  .card-motorista.status-pend{
+    border-left-color:#c9971c;
+    background:linear-gradient(120deg,#fffbf0 0%,#fbe8ad 22%,#fff6dd 38%,#f5d675 52%,#fff6dd 68%,#fbe8ad 84%,#fffbf0 100%);
+  }
+  .card-motorista.status-pend:hover{border-color:#c9971c;box-shadow:0 10px 22px rgba(201,151,28,.22);}
+  .card-motorista.status-pend .status-dot.pend{background:#c9971c;box-shadow:0 0 6px rgba(201,151,28,.55);}
+  .card-motorista.status-pend .status-linha{border-top-color:rgba(201,151,28,.3);}
+
 
   table{width:100%;border-collapse:collapse;font-size:12.5px;}
   th,td{padding:7px 9px;border-bottom:1px solid var(--cinza-borda);text-align:left;white-space:nowrap;}
@@ -267,29 +286,6 @@
     Motoristas do dia <span id="titulo-data"></span>
   </h2>
   <div class="grid-motoristas" id="grid-motoristas"></div>
-
-  <div class="toolbar">
-    <h2 style="margin:0;font-size:15px;color:var(--azul);display:flex;align-items:center;gap:7px;">
-      <svg class="icon" viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
-      Visão geral — todas as cargas do dia
-    </h2>
-    <div class="campo-busca">
-      <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" id="filtro-geral" placeholder="Buscar carga, destino ou motorista...">
-    </div>
-  </div>
-  <div class="tabela-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Carga</th><th>Motorista</th><th>Destino</th><th>Região</th>
-          <th>Valor</th><th>Peso</th><th>Vol</th><th>Box</th><th>Rua</th><th>Prédio</th>
-          <th>Status Carga</th><th>Emissão</th>
-        </tr>
-      </thead>
-      <tbody id="corpo-tabela-geral"></tbody>
-    </table>
-  </div>
 </div>
 
 <!-- ============ TELA 3: ORDEM DE CARREGAMENTO ============ -->
@@ -593,15 +589,16 @@ function selecionarData(data){
 /* ---------------- TELA 2: motoristas + visão geral ---------------- */
 function carregarMotoristasEGeral(data){
   document.getElementById('grid-motoristas').innerHTML = 'Carregando...';
-  document.getElementById('corpo-tabela-geral').innerHTML = '<tr><td colspan="12">Carregando...</td></tr>';
 
   fetchJSON(API_URL + '?action=getMotoristasPorData&data=' + encodeURIComponent(data))
     .then(resp => {
       if (!resp.ok) throw new Error(resp.erro);
       const grid = document.getElementById('grid-motoristas');
       if (!resp.motoristas.length) { grid.innerHTML = '<div>Nenhum motorista nesta data.</div>'; return; }
-      grid.innerHTML = resp.motoristas.map(m => `
-        <div class="card-motorista" onclick="irParaTela3('${m.motorista.replace(/'/g,"\\'")}')">
+      grid.innerHTML = resp.motoristas.map(m => {
+        const tudoEmitido = m.qtdEmitidas === m.qtdCargas && m.qtdCargas > 0;
+        return `
+        <div class="card-motorista ${tudoEmitido ? 'status-ok' : 'status-pend'}" onclick="irParaTela3('${m.motorista.replace(/'/g,"\\'")}')">
           <div class="nome">
             <svg class="icon" viewBox="0 0 24 24"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>
             ${m.motorista || '(sem nome)'}
@@ -619,50 +616,16 @@ function carregarMotoristasEGeral(data){
             <b>${m.totalVol.toFixed(2)}</b>
           </div>
           <div class="status-linha">
-            <span class="status-dot ${m.qtdEmitidas === m.qtdCargas && m.qtdCargas > 0 ? 'ok' : 'pend'}"></span>
+            <span class="status-dot ${tudoEmitido ? 'ok' : 'pend'}"></span>
             <span style="font-size:11.5px;color:var(--cinza-texto);">${m.qtdEmitidas} emitidas</span>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     })
     .catch(err => {
       document.getElementById('grid-motoristas').innerHTML = 'Erro: ' + err.message;
     });
-
-  fetchJSON(API_URL + '?action=getCargasPorData&data=' + encodeURIComponent(data))
-    .then(resp => {
-      if (!resp.ok) throw new Error(resp.erro);
-      estado.cargasGeral = resp.cargas;
-      renderizarTabelaGeral();
-    })
-    .catch(err => {
-      document.getElementById('corpo-tabela-geral').innerHTML = '<tr><td colspan="12">Erro: ' + err.message + '</td></tr>';
-    });
-}
-document.getElementById('filtro-geral').addEventListener('input', renderizarTabelaGeral);
-
-function renderizarTabelaGeral(){
-  const filtro = document.getElementById('filtro-geral').value.trim().toLowerCase();
-  const lista = (estado.cargasGeral || []).filter(c =>
-    !filtro ||
-    String(c.carga).toLowerCase().includes(filtro) ||
-    String(c.destino).toLowerCase().includes(filtro) ||
-    String(c.motorista).toLowerCase().includes(filtro)
-  );
-  const corpo = document.getElementById('corpo-tabela-geral');
-  if (!lista.length){ corpo.innerHTML = '<tr><td colspan="12">Nenhuma carga encontrada.</td></tr>'; return; }
-
-  corpo.innerHTML = lista.map(c => `
-    <tr>
-      <td>${c.carga}</td><td>${c.motorista}</td><td>${c.destino}</td><td>${c.regiao}</td>
-      <td>${formatarMoeda(c.valor)}</td><td>${c.peso}</td><td>${c.vol}</td>
-      <td>${c.box || ''}</td><td>${c.rua || ''}</td><td>${c.predio || ''}</td>
-      <td>${c.statusCarga || ''}</td>
-      <td>${c.statusImpressao === 'EMITIDO'
-            ? '<span class="badge emitido"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="8 12 11 15 16 9"/></svg>EMITIDO</span>'
-            : '<span class="badge pendente"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>PENDENTE</span>'}</td>
-    </tr>
-  `).join('');
 }
 
 /* ---------------- TELA 3: ordem de carregamento ---------------- */
