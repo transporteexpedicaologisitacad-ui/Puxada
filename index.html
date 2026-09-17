@@ -191,6 +191,34 @@
   .badge.emitido{background:var(--verde);}
   .badge.pendente{background:#9aa0a6;}
 
+  /* ---------- Selo de 1ª via / reimpressão ---------- */
+  .selo-via{
+    display:inline-flex;align-items:center;gap:6px;margin-top:6px;
+    padding:4px 11px;border-radius:12px;font-size:10.5px;font-weight:700;
+    letter-spacing:.3px;text-transform:uppercase;
+  }
+  .selo-via.oculto{display:none !important;}
+  .selo-via.via-nunca{background:#eef1f4;color:#5f6368;border:1px solid #dcdfe3;}
+  .selo-via.via-primeira{background:#e6f4ea;color:#0f9d58;border:1px solid #a8dab5;}
+  .selo-via.via-reimpressao{background:#fdecea;color:#c5221f;border:1px solid #f6b8b3;}
+
+  /* Carimbo grande, só aparece na folha impressa — RODAPÉ (canto inferior direito).
+     Fica no fluxo normal da página (não é 'fixed'), assim nunca sobrepõe nem corta
+     o título "Ordem de Carregamento e Expedição" no alto da folha. */
+  .carimbo-impressao{display:none;}
+  @media print{
+    .carimbo-impressao.ativo{
+      display:block;text-align:right;margin:12px 2px 0;page-break-inside:avoid;break-inside:avoid;
+    }
+    .carimbo-impressao.ativo .carimbo-caixa{
+      display:inline-block;padding:5px 16px;border:3px solid currentColor;border-radius:6px;
+      font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:1px;
+      transform:rotate(-2.5deg);background:#fff;
+    }
+    .carimbo-impressao.via-primeira{color:#0f9d58;}
+    .carimbo-impressao.via-reimpressao{color:#c5221f;}
+  }
+
   /* ---------- Tela 3: ordem de carregamento ---------- */
   .painel-3-layout{display:grid;grid-template-columns:280px 1fr;gap:18px;}
   @media(max-width:900px){.painel-3-layout{grid-template-columns:1fr;}}
@@ -227,7 +255,13 @@
   .btn-voltar:hover{border-color:var(--azul);color:var(--azul);transform:translateX(-2px);}
 
   .spinner{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:girar .7s linear infinite;vertical-align:middle;margin-right:6px;}
+  .spinner-azul{width:12px;height:12px;border-color:var(--azul);border-top-color:transparent;}
   @keyframes girar{to{transform:rotate(360deg);}}
+  .aviso-atualizando{
+    display:inline-flex;align-items:center;font-size:11px;font-weight:600;
+    color:var(--cinza-texto);letter-spacing:.2px;margin-left:4px;
+  }
+  .aviso-atualizando.oculto{display:none !important;}
 
   #config-alerta{background:#fef7e0;border:1px solid var(--amarelo);color:#7a5b00;padding:10px 12px;border-radius:6px;font-size:13px;margin-bottom:14px;display:none;}
 
@@ -256,6 +290,7 @@
     #tela3 > .ordem-header{order:1;}
     #tela3 > .painel-3-layout{order:2;display:block;}
     #tela3 > .ficha-manual-print{order:3;}
+    #tela3 > .carimbo-impressao{order:4;}
     #coluna-info-motorista{display:none;} /* substituída pela ficha manuscrita no rodapé */
 
     /* dentro da coluna de cargas: totais primeiro, tabela depois */
@@ -394,6 +429,9 @@
   <h2 style="font-size:15px;color:var(--azul);margin:14px 0 10px;display:flex;align-items:center;gap:7px;">
     <svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15 14c2.8.3 5 2.4 5 5"/></svg>
     Motoristas do dia <span id="titulo-data"></span>
+    <span class="aviso-atualizando oculto" id="aviso-atualizando">
+      <span class="spinner spinner-azul"></span>atualizando...
+    </span>
   </h2>
   <div class="grid-motoristas" id="grid-motoristas"></div>
 </div>
@@ -412,7 +450,8 @@
     </h2>
     <div class="meta">
       Data e Hora Emissão: <b id="meta-datahora">—</b><br>
-      Nº Controle: <b id="meta-numcontrole">—</b>
+      Nº Controle: <b id="meta-numcontrole">—</b><br>
+      <span class="selo-via oculto" id="selo-via"></span>
     </div>
   </div>
 
@@ -513,6 +552,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Carimbo visível SOMENTE na folha impressa (rodapé), identificando 1ª via / reimpressão -->
+  <div class="carimbo-impressao" id="carimbo-impressao"></div>
 </div>
 
 <script>
@@ -590,13 +632,83 @@ function fetchJSON(url, options, tentativa){
   });
 }
 
+/* =========================================================
+ * CACHE EM MEMÓRIA — "mostrar já, atualizar depois"
+ * ---------------------------------------------------------
+ * O Apps Script leva alguns segundos por chamada. Sem cache, cada
+ * "Voltar aos motoristas" refazia a consulta inteira e travava a
+ * expedição. Agora a tela aparece INSTANTANEAMENTE com o último
+ * resultado conhecido e a atualização real acontece em segundo
+ * plano (um discreto "atualizando..." indica isso).
+ *
+ * TTL_FRESCO: dentro desse tempo o dado é considerado atual e nem
+ * chega a ser revalidado. Depois disso, mostra o cache e revalida.
+ * ========================================================= */
+const TTL_FRESCO = 45000; // 45s
+const cacheAPI = new Map();          // chave -> { ts, dados }
+const requisicoesEmVoo = new Map();  // chave -> Promise (evita chamadas duplicadas)
+
+function lerCache(chave){
+  const item = cacheAPI.get(chave);
+  if (!item) return null;
+  return { dados: item.dados, fresco: (Date.now() - item.ts) < TTL_FRESCO };
+}
+function gravarCache(chave, dados){ cacheAPI.set(chave, { ts: Date.now(), dados: dados }); }
+function invalidarCache(prefixo){
+  Array.from(cacheAPI.keys()).forEach(k => { if (k.indexOf(prefixo) === 0) cacheAPI.delete(k); });
+}
+
+/* Busca com deduplicação: se a mesma consulta já está em andamento,
+   reaproveita a promessa em vez de disparar outra chamada. */
+function buscarComCache(chave, url){
+  if (requisicoesEmVoo.has(chave)) return requisicoesEmVoo.get(chave);
+  const p = fetchJSON(url)
+    .then(resp => {
+      if (!resp.ok) throw new Error(resp.erro);
+      gravarCache(chave, resp);
+      requisicoesEmVoo.delete(chave);
+      return resp;
+    })
+    .catch(err => { requisicoesEmVoo.delete(chave); throw err; });
+  requisicoesEmVoo.set(chave, p);
+  return p;
+}
+
+/* Pré-carrega em segundo plano ao passar o mouse / encostar o dedo no card:
+   quando o usuário clica, o dado normalmente já chegou. */
+function prefetch(chave, url){
+  if (cacheAPI.has(chave) || requisicoesEmVoo.has(chave)) return;
+  buscarComCache(chave, url).catch(() => {});
+}
+function prefetchMotoristas(data){
+  prefetch('motoristas:' + data, API_URL + '?action=getMotoristasPorData&data=' + encodeURIComponent(data));
+}
+function prefetchOrdem(motorista){
+  if (!estado.data) return;
+  prefetch('cargas:' + estado.data + '|' + motorista,
+    API_URL + '?action=getCargasPorData&data=' + encodeURIComponent(estado.data) + '&motorista=' + encodeURIComponent(motorista));
+}
+
+/* Selo discreto de "atualizando em segundo plano" */
+function marcarAtualizando(idElemento, ligado){
+  const el = document.getElementById(idElemento);
+  if (el) el.classList.toggle('oculto', !ligado);
+}
+
 /* ---------------- navegação entre telas ---------------- */
 function irParaTela1(){
   document.getElementById('tela1').classList.remove('oculto');
   document.getElementById('tela2').classList.add('oculto');
   document.getElementById('tela3').classList.add('oculto');
   document.getElementById('breadcrumb').textContent = '';
-  carregarDatas();
+  // volta instantaneamente para a mesma visão (mês aberto) usando o que já
+  // está na memória; só busca do servidor se ainda não houver nada.
+  if (estado.gruposMeses && estado.gruposMeses.length) {
+    if (estado.mesAtual) abrirMes(estado.mesAtual); else renderGridMeses();
+    carregarDatas({ silencioso: true });
+  } else {
+    carregarDatas();
+  }
 }
 function irParaTela2(){
   document.getElementById('tela1').classList.add('oculto');
@@ -646,25 +758,41 @@ function renderCabecalhoTela1(mesLabel){
     : `<h2>Datas de expedição</h2>`;
 }
 
-function carregarDatas(){
-  document.getElementById('grid-datas').innerHTML = '<div style="color:#8493ac;padding:0 20px 20px;">Carregando datas...</div>';
-  fetchJSON(API_URL + '?action=getDatas')
+function carregarDatas(opcoes){
+  opcoes = opcoes || {};
+  // modo silencioso = já existe conteúdo na tela; atualiza por baixo dos panos
+  // sem apagar nada e sem piscar "Carregando...".
+  if (!opcoes.silencioso) {
+    document.getElementById('grid-datas').innerHTML = '<div style="color:#8493ac;padding:0 20px 20px;">Carregando datas...</div>';
+  }
+
+  const emCache = opcoes.silencioso ? lerCache('datas') : null;
+  if (emCache && emCache.fresco) return Promise.resolve(emCache.dados);
+
+  return buscarComCache('datas', API_URL + '?action=getDatas')
     .then(resp => {
-      if (!resp.ok) throw new Error(resp.erro);
       if (!resp.datas.length) {
         renderCabecalhoTela1(null);
         document.getElementById('grid-datas').innerHTML = '<div style="color:#8493ac;padding:0 20px 20px;">Nenhuma data encontrada.</div>';
-        return;
+        return resp;
       }
+      const mesAberto = estado.mesAtual;
       estado.gruposMeses = agruparPorMes(resp.datas);
-      estado.mesAtual = null;
-      renderGridMeses();
+      // preserva o mês que o usuário estava vendo, se ele ainda existir
+      estado.mesAtual = (mesAberto && estado.gruposMeses.some(g => g.chave === mesAberto)) ? mesAberto : null;
+      // só redesenha a tela 1 se ela estiver visível (evita trabalho inútil)
+      if (!document.getElementById('tela1').classList.contains('oculto')) {
+        if (estado.mesAtual) abrirMes(estado.mesAtual); else renderGridMeses();
+      }
+      return resp;
     })
     .catch(err => {
+      if (opcoes.silencioso) return null; // falha em segundo plano não atrapalha a tela
       renderCabecalhoTela1(null);
       document.getElementById('grid-datas').innerHTML =
         '<div style="color:#fca5a5;padding:0 20px 10px;">Erro ao carregar: ' + err.message + '</div>' +
         '<div style="padding:0 20px 20px;"><button type="button" class="btn-mes-voltar" onclick="carregarDatas()">Tentar novamente</button></div>';
+      return null;
     });
 }
 
@@ -700,7 +828,8 @@ function abrirMes(chave){
   grid.innerHTML = grupo.dias
     .sort((a, b) => parseDataBR(a.data).ordenavel - parseDataBR(b.data).ordenavel)
     .map(d => `
-      <div class="card-data" onclick="selecionarData('${d.data}')">
+      <div class="card-data" onclick="selecionarData('${d.data}')"
+           onmouseenter="prefetchMotoristas('${d.data}')" onpointerdown="prefetchMotoristas('${d.data}')">
         <div class="cd-topo">
           <span class="dia">${d.data}</span>
           <span class="cd-dot ${d.qtdEmitidas === d.qtdCargas && d.qtdCargas > 0 ? 'ok' : 'pend'}"></span>
@@ -727,19 +856,55 @@ function selecionarData(data){
   irParaTela2();
 }
 
-/* ---------------- TELA 2: motoristas + visão geral ---------------- */
-function carregarMotoristasEGeral(data){
-  document.getElementById('grid-motoristas').innerHTML = 'Carregando...';
+/* ---------------- TELA 2: motoristas + visão geral ----------------
+ * Volta da ordem para os motoristas deve ser IMEDIATA: se já temos a lista
+ * em memória, ela é desenhada na hora e o servidor é consultado em paralelo
+ * só para conferir se algo mudou. */
+function carregarMotoristasEGeral(data, opcoes){
+  opcoes = opcoes || {};
+  const chave = 'motoristas:' + data;
+  const grid = document.getElementById('grid-motoristas');
+  const emCache = opcoes.forcar ? null : lerCache(chave);
 
-  fetchJSON(API_URL + '?action=getMotoristasPorData&data=' + encodeURIComponent(data))
+  if (emCache) {
+    renderMotoristas(emCache.dados, data);           // aparece instantaneamente
+    if (emCache.fresco) return Promise.resolve(emCache.dados);
+    marcarAtualizando('aviso-atualizando', true);    // revalida discretamente
+  } else {
+    grid.innerHTML = '<div style="color:var(--cinza-texto);font-size:13px;"><span class="spinner spinner-azul"></span>Carregando motoristas...</div>';
+  }
+
+  return buscarComCache(chave, API_URL + '?action=getMotoristasPorData&data=' + encodeURIComponent(data))
     .then(resp => {
-      if (!resp.ok) throw new Error(resp.erro);
-      const grid = document.getElementById('grid-motoristas');
-      if (!resp.motoristas.length) { grid.innerHTML = '<div>Nenhum motorista nesta data.</div>'; return; }
-      grid.innerHTML = resp.motoristas.map(m => {
+      marcarAtualizando('aviso-atualizando', false);
+      // só redesenha se o usuário ainda estiver olhando essa mesma data
+      if (estado.data === data && !document.getElementById('tela2').classList.contains('oculto')) {
+        renderMotoristas(resp, data);
+      }
+      return resp;
+    })
+    .catch(err => {
+      marcarAtualizando('aviso-atualizando', false);
+      if (emCache) return null; // mantém a lista antiga em tela; nada trava
+      grid.innerHTML =
+        '<div>Erro: ' + err.message + '</div>' +
+        '<button type="button" class="btn-voltar" style="margin-top:10px;" onclick="carregarMotoristasEGeral(\'' + data.replace(/'/g,"\\'") + '\', {forcar:true})">Tentar novamente</button>';
+      return null;
+    });
+}
+
+function renderMotoristas(resp, data){
+  const grid = document.getElementById('grid-motoristas');
+  if (!resp || !resp.motoristas || !resp.motoristas.length) {
+    grid.innerHTML = '<div>Nenhum motorista nesta data.</div>';
+    return;
+  }
+  grid.innerHTML = resp.motoristas.map(m => {
+        const nomeEsc = (m.motorista || '').replace(/'/g,"\\'");
         const tudoEmitido = m.qtdEmitidas === m.qtdCargas && m.qtdCargas > 0;
         return `
-        <div class="card-motorista ${tudoEmitido ? 'status-ok' : 'status-pend'}" onclick="irParaTela3('${m.motorista.replace(/'/g,"\\'")}')">
+        <div class="card-motorista ${tudoEmitido ? 'status-ok' : 'status-pend'}" onclick="irParaTela3('${nomeEsc}')"
+             onmouseenter="prefetchOrdem('${nomeEsc}')" onpointerdown="prefetchOrdem('${nomeEsc}')">
           <div class="nome">
             <svg class="icon" viewBox="0 0 24 24"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>
             ${m.motorista || '(sem nome)'}
@@ -762,13 +927,7 @@ function carregarMotoristasEGeral(data){
           </div>
         </div>
       `;
-      }).join('');
-    })
-    .catch(err => {
-      document.getElementById('grid-motoristas').innerHTML =
-        '<div>Erro: ' + err.message + '</div>' +
-        '<button type="button" class="btn-voltar" style="margin-top:10px;" onclick="carregarMotoristasEGeral(\'' + data.replace(/'/g,"\\'") + '\')">Tentar novamente</button>';
-    });
+  }).join('');
 }
 
 /* ---------------- TELA 3: ordem de carregamento ---------------- */
@@ -783,23 +942,40 @@ function carregarOrdemMotorista(data, motorista){
   document.getElementById('meta-datahora').textContent = '—';
   document.getElementById('meta-numcontrole').textContent = '—';
   document.getElementById('corpo-ordem').innerHTML = '<tr><td colspan="15">Carregando...</td></tr>';
+  document.getElementById('selo-via').className = 'selo-via oculto';
+  document.getElementById('carimbo-impressao').className = 'carimbo-impressao';
+  document.getElementById('carimbo-impressao').textContent = '';
 
-  fetchJSON(API_URL + '?action=getCargasPorData&data=' + encodeURIComponent(data) + '&motorista=' + encodeURIComponent(motorista))
+  const chave = 'cargas:' + data + '|' + motorista;
+  const emCache = lerCache(chave);
+  if (emCache) aplicarOrdem(emCache.dados);   // desenha na hora o que já temos
+
+  buscarComCache(chave, API_URL + '?action=getCargasPorData&data=' + encodeURIComponent(data) + '&motorista=' + encodeURIComponent(motorista))
     .then(resp => {
-      if (!resp.ok) throw new Error(resp.erro);
-      estado.cargas = resp.cargas;
-      renderizarOrdem();
-
-      // se já estava tudo emitido antes, mostra os dados da última emissão
-      const jaEmitido = resp.cargas.find(c => c.statusImpressao === 'EMITIDO');
-      if (jaEmitido) {
-        document.getElementById('meta-datahora').textContent = jaEmitido.dataHoraEmissao || '—';
-        document.getElementById('meta-numcontrole').textContent = jaEmitido.numControle || '—';
-      }
+      // ignora respostas de um motorista que o usuário já trocou
+      if (estado.data !== data || estado.motorista !== motorista) return;
+      aplicarOrdem(resp);
     })
     .catch(err => {
+      if (emCache) return; // já há conteúdo válido em tela
       document.getElementById('corpo-ordem').innerHTML = '<tr><td colspan="15">Erro: ' + err.message + '</td></tr>';
     });
+}
+
+function aplicarOrdem(resp){
+  estado.cargas = resp.cargas || [];
+  renderizarOrdem();
+
+  // se já estava tudo emitido antes, mostra os dados da 1ª emissão
+  const jaEmitido = estado.cargas.find(c => c.statusImpressao === 'EMITIDO');
+  document.getElementById('meta-datahora').textContent = jaEmitido ? (jaEmitido.dataHoraEmissao || '—') : '—';
+  document.getElementById('meta-numcontrole').textContent = jaEmitido ? (jaEmitido.numControle || '—') : '—';
+
+  // mostra, antes de qualquer clique em "Imprimir", se essa ordem já
+  // foi impressa antes e quantas vezes (prévia do que vai acontecer)
+  const maiorQtdImpressoes = estado.cargas.reduce((max, c) => Math.max(max, c.qtdImpressoes || 0), 0);
+  document.getElementById('selo-via').classList.remove('oculto');
+  atualizarSeloVia('preview', { qtdImpressoes: maiorQtdImpressoes });
 }
 
 function renderizarOrdem(){
@@ -835,6 +1011,45 @@ function formatarMoeda(v){
   return 'R$ ' + Number(v || 0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 
+/* ---------------- Selo de 1ª via / reimpressão ----------------
+ * modo 'preview': mostra o estado ATUAL (quantas vezes já foi impressa),
+ *   usado assim que a ordem é carregada na tela, antes de clicar em Imprimir.
+ * modo 'final': mostra o resultado EXATO que o backend acabou de gravar
+ *   (retornado por marcarEmitido), usado depois de clicar em Imprimir —
+ *   é esse texto que vai para o carimbo da folha impressa.
+ */
+function atualizarSeloVia(modo, dados){
+  const badge = document.getElementById('selo-via');
+  const carimbo = document.getElementById('carimbo-impressao');
+
+  if (modo === 'preview') {
+    const qtd = dados.qtdImpressoes || 0;
+    if (qtd <= 0) {
+      badge.textContent = 'Ainda não impressa (será 1ª via)';
+      badge.className = 'selo-via via-nunca';
+    } else {
+      badge.textContent = 'Já impressa ' + qtd + 'x — próxima será REIMPRESSÃO Nº ' + (qtd + 1);
+      badge.className = 'selo-via via-reimpressao';
+    }
+    // não mexe no carimbo de impressão aqui: ele só é definido no momento
+    // em que a ordem realmente é emitida (modo 'final'), para refletir
+    // com exatidão o que o backend gravou.
+    return;
+  }
+
+  // modo === 'final'
+  const primeira = dados.tipo === '1A_VIA';
+  badge.textContent = primeira
+    ? '1ª VIA'
+    : 'REIMPRESSÃO Nº ' + dados.qtdImpressoes + (dados.parcial ? ' (com cargas novas)' : '');
+  badge.className = 'selo-via ' + (primeira ? 'via-primeira' : 'via-reimpressao');
+
+  const textoCarimbo = primeira ? '1ª VIA' : 'REIMPRESSÃO Nº ' + dados.qtdImpressoes;
+  carimbo.innerHTML = '<span class="carimbo-caixa"></span>';
+  carimbo.firstChild.textContent = textoCarimbo;
+  carimbo.className = 'carimbo-impressao ativo ' + (primeira ? 'via-primeira' : 'via-reimpressao');
+}
+
 /* ---------------- Botão Imprimir: marca EMITIDO + imprime ---------------- */
 document.getElementById('btn-imprimir').addEventListener('click', function(){
   const btn = this;
@@ -864,8 +1079,21 @@ document.getElementById('btn-imprimir').addEventListener('click', function(){
       if (!resp.ok) throw new Error(resp.erro);
       document.getElementById('meta-datahora').textContent = resp.resultado.dataHoraEmissao;
       document.getElementById('meta-numcontrole').textContent = resp.resultado.numControle;
-      msg.textContent = '✅ Marcado como EMITIDO. Abrindo impressão...';
-      msg.style.color = 'var(--verde)';
+      atualizarSeloVia('final', resp.resultado);
+
+      // os contadores de emitidas mudaram: descarta o que estava guardado
+      // e já refaz a lista de motoristas em segundo plano, de modo que o
+      // "Voltar aos motoristas" continue instantâneo e correto.
+      invalidarCache('cargas:' + estado.data + '|' + estado.motorista);
+      invalidarCache('motoristas:' + estado.data);
+      invalidarCache('datas');
+      prefetchMotoristas(estado.data);
+
+      const ehReimpressao = resp.resultado.tipo === 'REIMPRESSAO';
+      msg.textContent = ehReimpressao
+        ? '✅ REIMPRESSÃO (nº ' + resp.resultado.qtdImpressoes + ') registrada. Abrindo impressão...'
+        : '✅ 1ª via registrada. Abrindo impressão...';
+      msg.style.color = ehReimpressao ? 'var(--amarelo)' : 'var(--verde)';
       setTimeout(() => window.print(), 300);
     })
     .catch(err => {
