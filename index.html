@@ -64,8 +64,18 @@
   }
   .marca-sub{font-size:12.5px;color:#b9ab7e;font-weight:500;}
 
+  .btn-atualizar{
+    margin-left:auto;display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+    background:rgba(227,178,60,.10);border:1px solid #2a3c5c;color:var(--dourado-vivo);
+    border-radius:20px;padding:7px 15px;font-size:12.5px;font-weight:600;font-family:inherit;
+  }
+  .btn-atualizar:hover{background:rgba(227,178,60,.2);border-color:var(--tech-accent);}
+  .btn-atualizar .icon{color:var(--dourado-vivo);width:14px;height:14px;}
+  .btn-atualizar.girando .icon{animation:girar .8s linear infinite;}
+  @media(max-width:520px){.btn-atualizar{padding:7px 11px;}.btn-atualizar span{display:none;}}
+
   .marca-relogio{
-    margin-left:auto;display:flex;align-items:center;gap:8px;
+    margin-left:10px;display:flex;align-items:center;gap:8px;
     font-family:var(--mono);font-size:13px;color:var(--tech-muted);
     border:1px solid #24344f;border-radius:20px;padding:6px 14px;background:rgba(255,255,255,.02);
   }
@@ -399,6 +409,10 @@
     <div class="marca-titulo">Disdal Transporte</div>
     <div class="marca-sub">Painel de Expedição</div>
   </div>
+  <button class="btn-atualizar" id="btn-atualizar" onclick="atualizarTudo()" title="Buscar os dados mais recentes da planilha">
+    <svg class="icon" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><polyline points="21 3 21 9 15 9"/></svg>
+    <span>Atualizar</span>
+  </button>
   <div class="marca-relogio">
     <span class="relogio-dot"></span>
     <span id="relogio-hora">--:--:--</span>
@@ -644,7 +658,7 @@ function fetchJSON(url, options, tentativa){
  * TTL_FRESCO: dentro desse tempo o dado é considerado atual e nem
  * chega a ser revalidado. Depois disso, mostra o cache e revalida.
  * ========================================================= */
-const TTL_FRESCO = 45000; // 45s
+const TTL_FRESCO = 15000; // 15s — depois disso a tela aparece na hora, mas o servidor é reconsultado
 const cacheAPI = new Map();          // chave -> { ts, dados }
 const requisicoesEmVoo = new Map();  // chave -> Promise (evita chamadas duplicadas)
 
@@ -658,11 +672,39 @@ function invalidarCache(prefixo){
   Array.from(cacheAPI.keys()).forEach(k => { if (k.indexOf(prefixo) === 0) cacheAPI.delete(k); });
 }
 
+/* Limpa TUDO e recarrega a tela atual do zero — é o que o botão
+   "Atualizar" faz quando alguém acabou de mexer na planilha. */
+function atualizarTudo(){
+  cacheAPI.clear();
+  requisicoesEmVoo.clear();
+  const btn = document.getElementById('btn-atualizar');
+  if (btn) {
+    btn.classList.add('girando');
+    const inicio = Date.now();
+    const observar = setInterval(() => {
+      if (requisicoesEmVoo.size === 0 || Date.now() - inicio > 25000) {
+        clearInterval(observar);
+        btn.classList.remove('girando');
+      }
+    }, 200);
+  }
+  if (!document.getElementById('tela3').classList.contains('oculto')) {
+    carregarOrdemMotorista(estado.data, estado.motorista);
+  } else if (!document.getElementById('tela2').classList.contains('oculto')) {
+    carregarMotoristasEGeral(estado.data, { forcar: true });
+  } else {
+    carregarDatas();
+  }
+}
+
 /* Busca com deduplicação: se a mesma consulta já está em andamento,
-   reaproveita a promessa em vez de disparar outra chamada. */
+   reaproveita a promessa em vez de disparar outra chamada.
+   O parâmetro _ts evita que o navegador (ou o cache do Apps Script)
+   devolva uma resposta antiga já guardada. */
 function buscarComCache(chave, url){
   if (requisicoesEmVoo.has(chave)) return requisicoesEmVoo.get(chave);
-  const p = fetchJSON(url)
+  const urlFinal = url + (url.indexOf('?') > -1 ? '&' : '?') + '_ts=' + Date.now();
+  const p = fetchJSON(urlFinal)
     .then(resp => {
       if (!resp.ok) throw new Error(resp.erro);
       gravarCache(chave, resp);
