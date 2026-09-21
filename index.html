@@ -188,6 +188,41 @@
   .card-motorista.status-pend .status-linha{border-top-color:rgba(201,151,28,.3);}
 
 
+  /* ---------- Barra de impressão em lote (Tela 2) ---------- */
+  .barra-lote{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    background:#f4f6f8;border:1px solid var(--cinza-borda);border-radius:8px;
+    padding:10px 14px;margin:0 0 14px;font-size:13px;
+  }
+  .barra-lote .chk-todos{display:flex;align-items:center;gap:7px;cursor:pointer;font-weight:600;color:var(--cinza-texto);}
+  .barra-lote input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--azul);}
+  #contagem-selecionados{color:var(--cinza-texto);font-size:12.5px;}
+  .btn-lote-imprimir{
+    margin-left:auto;background:var(--verde);color:#fff;border:none;border-radius:6px;
+    padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn-lote-imprimir:hover:not(:disabled){background:#0f7a30;}
+  .btn-lote-imprimir:disabled{background:#9aa0a6;cursor:not-allowed;}
+  .selecao-cb-wrap{position:absolute;top:10px;right:10px;z-index:2;}
+  .selecao-cb-wrap input{width:18px;height:18px;cursor:pointer;accent-color:var(--azul);}
+
+  /* ---------- Overlay de progresso da impressão em lote ---------- */
+  #overlay-lote{position:fixed;inset:0;background:rgba(9,14,24,.88);z-index:9999;display:flex;align-items:center;justify-content:center;}
+  #overlay-lote.oculto{display:none !important;}
+  .overlay-lote-caixa{
+    background:#101b30;border:1px solid var(--tech-linha);border-radius:12px;padding:28px 34px;
+    display:flex;flex-direction:column;align-items:center;gap:14px;min-width:280px;
+    box-shadow:0 20px 50px rgba(0,0,0,.5);
+  }
+  .spinner-lote{width:34px;height:34px;border:3px solid var(--dourado-vivo);border-top-color:transparent;}
+  #overlay-lote-texto{color:var(--tech-text);font-family:var(--display);font-size:14px;text-align:center;max-width:280px;}
+  .barra-progresso-lote{width:240px;height:8px;background:#24344f;border-radius:6px;overflow:hidden;}
+  .barra-progresso-lote-fill{height:100%;width:0%;background:var(--dourado-vivo);transition:width .25s ease;}
+
+  /* ---------- Documento de impressão em lote (fora da tela, só existe para @media print) ---------- */
+  #impressao-lote{display:none;}
+  #impressao-lote.ativo{display:block;position:absolute;left:-9999px;top:0;width:210mm;}
+
   table{width:100%;border-collapse:collapse;font-size:12.5px;}
   th,td{padding:7px 9px;border-bottom:1px solid var(--cinza-borda);text-align:left;white-space:nowrap;}
   th{background:#f1f3f4;position:sticky;top:0;}
@@ -284,7 +319,8 @@
 
     body{background:#fff;padding:0;}
     .icon{display:none !important;}
-    #tela1, #tela2, .toolbar, .btn-imprimir, .btn-voltar, .breadcrumb, .marca-hero, .subtitulo, #config-alerta { display:none !important; }
+    #tela1, #tela2, .toolbar, .btn-imprimir, .btn-voltar, .breadcrumb, .marca-hero, .subtitulo, #config-alerta,
+    .barra-lote, .selecao-cb-wrap, #overlay-lote { display:none !important; }
     .card{border:none;padding:0;}
 
     /* título destacado e centralizado */
@@ -295,18 +331,24 @@
     }
     .ordem-header .meta{text-align:center;font-size:12px;margin:0 auto;}
 
-    /* layout em coluna única, empilhado (retrato) */
-    #tela3{display:flex;flex-direction:column;}
-    #tela3 > .ordem-header{order:1;}
-    #tela3 > .painel-3-layout{order:2;display:block;}
-    #tela3 > .ficha-manual-print{order:3;}
-    #tela3 > .carimbo-impressao{order:4;}
-    #coluna-info-motorista{display:none;} /* substituída pela ficha manuscrita no rodapé */
+    /* layout em coluna única, empilhado (retrato) — aplica-se tanto à ordem
+       única (Tela 3) quanto a cada página do lote (.pagina-impressao) */
+    .pagina-impressao{display:flex;flex-direction:column;}
+    .pagina-impressao > .ordem-header{order:1;}
+    .pagina-impressao > .painel-3-layout{order:2;display:block;}
+    .pagina-impressao > .ficha-manual-print{order:3;}
+    .pagina-impressao > .carimbo-impressao{order:4;}
+    .col-info-motorista{display:none;} /* substituída pela ficha manuscrita no rodapé */
 
     /* dentro da coluna de cargas: totais primeiro, tabela depois */
-    #coluna-cargas{display:flex;flex-direction:column;}
-    #coluna-cargas > .totais{order:1;}
-    #coluna-cargas > table.ordem-tabela{order:2;}
+    .col-cargas{display:flex;flex-direction:column;}
+    .col-cargas > .totais{order:1;}
+    .col-cargas > table.ordem-tabela{order:2;}
+
+    /* cada motorista do lote começa em uma folha nova */
+    .pagina-lote{page-break-after:always;}
+    .pagina-lote:last-child{page-break-after:auto;}
+    #impressao-lote.ativo{position:static;left:auto;width:auto;}
 
     /* resumo dos totais logo abaixo do cabeçalho, acima da tabela */
     .totais{
@@ -423,6 +465,19 @@
 
 <div class="breadcrumb" id="breadcrumb"></div>
 
+<!-- Overlay de progresso da impressão em lote -->
+<div id="overlay-lote" class="oculto">
+  <div class="overlay-lote-caixa">
+    <div class="spinner spinner-lote"></div>
+    <div id="overlay-lote-texto">Preparando…</div>
+    <div class="barra-progresso-lote"><div class="barra-progresso-lote-fill" id="barra-progresso-lote-fill"></div></div>
+  </div>
+</div>
+
+<!-- Documento de impressão em lote: fica fora da tela (invisível) e só é
+     mostrado no momento da impressão (window.print), quando ganha a classe "ativo" -->
+<div id="impressao-lote"></div>
+
 <!-- ============ TELA 1: DATAS ============ -->
 <div id="tela1" class="card painel-tech">
   <div class="painel-tech-scan"></div>
@@ -447,11 +502,24 @@
       <span class="spinner spinner-azul"></span>atualizando...
     </span>
   </h2>
+
+  <div class="barra-lote">
+    <label class="chk-todos">
+      <input type="checkbox" id="chk-todos" onchange="alternarSelecaoTodos(this.checked)">
+      Selecionar todos
+    </label>
+    <span id="contagem-selecionados">0 selecionados</span>
+    <button type="button" class="btn-lote-imprimir" id="btn-lote-imprimir" onclick="iniciarImpressaoLote()" disabled>
+      <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1"/><path d="M6 17h12v4H6z"/></svg>
+      Gerar PDF / Imprimir selecionados
+    </button>
+  </div>
+
   <div class="grid-motoristas" id="grid-motoristas"></div>
 </div>
 
 <!-- ============ TELA 3: ORDEM DE CARREGAMENTO ============ -->
-<div id="tela3" class="card oculto">
+<div id="tela3" class="card oculto pagina-impressao">
   <button class="btn-voltar" onclick="irParaTela2()">
     <svg class="icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
     Voltar aos motoristas
@@ -499,7 +567,7 @@
 
   <div class="painel-3-layout">
     <!-- Dados do motorista -->
-    <div id="coluna-info-motorista">
+    <div id="coluna-info-motorista" class="col-info-motorista">
       <label>
         <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
         Nome Motorista
@@ -534,7 +602,7 @@
     </div>
 
     <!-- Dados das cargas -->
-    <div id="coluna-cargas">
+    <div id="coluna-cargas" class="col-cargas">
       <table class="ordem-tabela">
         <thead>
           <tr>
@@ -947,6 +1015,9 @@ function renderMotoristas(resp, data){
         return `
         <div class="card-motorista ${tudoEmitido ? 'status-ok' : 'status-pend'}" onclick="irParaTela3('${nomeEsc}')"
              onmouseenter="prefetchOrdem('${nomeEsc}')" onpointerdown="prefetchOrdem('${nomeEsc}')">
+          <label class="selecao-cb-wrap" onclick="event.stopPropagation()" title="Selecionar para impressão em lote">
+            <input type="checkbox" class="cb-motorista" data-motorista="${nomeEsc}" onchange="atualizarContagemSelecionados()">
+          </label>
           <div class="nome">
             <svg class="icon" viewBox="0 0 24 24"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>
             ${m.motorista || '(sem nome)'}
@@ -970,7 +1041,270 @@ function renderMotoristas(resp, data){
         </div>
       `;
   }).join('');
+
+  // toda vez que a grade é redesenhada (nova data, atualização em segundo
+  // plano, etc.) a seleção de lote é reiniciada para não referenciar
+  // motoristas que talvez não estejam mais na lista
+  const chkTodos = document.getElementById('chk-todos');
+  if (chkTodos) chkTodos.checked = false;
+  atualizarContagemSelecionados();
 }
+
+/* =========================================================
+ * IMPRESSÃO EM LOTE — gera e imprime, em um único PDF, a Ordem de
+ * Carregamento de vários motoristas de uma vez (Tela 2), marcando cada um
+ * como EMITIDO exatamente como acontece na impressão individual (Tela 3).
+ * A impressão de uma ordem específica continua disponível normalmente,
+ * clicando no card do motorista (Tela 3) e usando "Imprimir Ordem".
+ * ========================================================= */
+
+function obterMotoristasSelecionados(){
+  return Array.from(document.querySelectorAll('.cb-motorista:checked'))
+    .map(cb => cb.getAttribute('data-motorista'));
+}
+
+function atualizarContagemSelecionados(){
+  const total = document.querySelectorAll('.cb-motorista').length;
+  const selecionados = document.querySelectorAll('.cb-motorista:checked').length;
+  const rotulo = document.getElementById('contagem-selecionados');
+  const btn = document.getElementById('btn-lote-imprimir');
+  if (rotulo) rotulo.textContent = selecionados + ' de ' + total + ' selecionados';
+  if (btn) btn.disabled = selecionados === 0;
+
+  const chkTodos = document.getElementById('chk-todos');
+  if (chkTodos) chkTodos.checked = (total > 0 && selecionados === total);
+}
+
+function alternarSelecaoTodos(marcar){
+  document.querySelectorAll('.cb-motorista').forEach(cb => { cb.checked = marcar; });
+  atualizarContagemSelecionados();
+}
+
+function mostrarOverlayLote(mostrar, total){
+  const overlay = document.getElementById('overlay-lote');
+  if (mostrar) {
+    overlay.classList.remove('oculto');
+    atualizarProgressoLote(0, total || 1, 'Iniciando...');
+  } else {
+    overlay.classList.add('oculto');
+  }
+}
+
+function atualizarProgressoLote(atual, total, texto){
+  const pct = total > 0 ? Math.round((atual / total) * 100) : 0;
+  const fill = document.getElementById('barra-progresso-lote-fill');
+  const rotulo = document.getElementById('overlay-lote-texto');
+  if (fill) fill.style.width = pct + '%';
+  if (rotulo) rotulo.textContent = (texto ? texto + ' — ' : '') + atual + '/' + total;
+}
+
+/* Gera as linhas da tabela de cargas (usada tanto na ordem única quanto em
+ * cada página do lote), retornando o HTML e os totais somados. */
+function construirLinhasTabela(cargas){
+  const linhas = cargas || [];
+  const totalLinhas = Math.max(linhas.length, 15); // sempre ao menos 15 linhas, como o modelo impresso
+  let html = '';
+  let somaPeso = 0, somaVol = 0, somaValor = 0;
+
+  for (let i = 0; i < totalLinhas; i++){
+    const c = linhas[i];
+    if (c) {
+      somaPeso += c.peso; somaVol += c.vol; somaValor += c.valor;
+      html += `
+        <tr>
+          <td>${i+1}</td>
+          <td>${c.carga}</td><td>${c.filial || ''}</td><td>${c.destino}</td><td>${c.regiao}</td><td>${c.ent ?? ''}</td>
+          <td>${formatarMoeda(c.valor)}</td><td>${c.peso}</td><td>${c.vol}</td>
+          <td>${c.box || ''}</td><td>${c.rua || ''}</td><td>${c.predio || ''}</td>
+          <td>${c.pallet || ''}</td><td>${c.chep || ''}</td><td>${c.obs || ''}</td>
+        </tr>`;
+    } else {
+      html += `<tr><td>${i+1}</td>${'<td>&nbsp;</td>'.repeat(14)}</tr>`;
+    }
+  }
+  return { html, somaPeso, somaVol, somaValor };
+}
+
+/* Monta o HTML de UMA folha da Ordem de Carregamento (para um motorista),
+ * já com o resultado definitivo de marcarEmitido (Nº controle, data/hora,
+ * 1ª via ou reimpressão) — igual ao que aparece na impressão individual. */
+function construirPaginaLote(pagina, data){
+  const { html: linhasHtml, somaPeso, somaVol, somaValor } = construirLinhasTabela(pagina.cargas);
+  const resultado = pagina.resultado || {};
+  const primeira = resultado.tipo === '1A_VIA';
+  const textoSelo = primeira
+    ? '1ª VIA'
+    : ('REIMPRESSÃO Nº ' + resultado.qtdImpressoes + (resultado.parcial ? ' (com cargas novas)' : ''));
+  const classeSelo = primeira ? 'via-primeira' : 'via-reimpressao';
+  const textoCarimbo = primeira ? '1ª VIA' : ('REIMPRESSÃO Nº ' + resultado.qtdImpressoes);
+  const motoristaEsc = (pagina.motorista || '').replace(/</g, '&lt;');
+
+  return `
+    <section class="pagina-impressao pagina-lote">
+      <div class="ordem-header">
+        <h2>Ordem de Carregamento e Expedição</h2>
+        <div class="meta">
+          Data e Hora Emissão: <b>${resultado.dataHoraEmissao || '—'}</b><br>
+          Nº Controle: <b>${resultado.numControle || '—'}</b><br>
+          <span class="selo-via ${classeSelo}">${textoSelo}</span>
+        </div>
+      </div>
+
+      <div class="ficha-manual-print">
+        <div class="ficha-linha">
+          <span class="ficha-label">Nome do Motorista:</span>
+          <span class="ficha-valor">${motoristaEsc}</span>
+        </div>
+        <div class="ficha-linha">
+          <span class="ficha-label">Data do Carregamento:</span>
+          <span class="ficha-valor">${data}</span>
+        </div>
+        <div class="ficha-linha">
+          <span class="ficha-label">Placa do Veículo:</span>
+          <span class="ficha-valor-vazio"></span>
+        </div>
+        <div class="ficha-linha">
+          <span class="ficha-label">Nome do Carregador:</span>
+          <span class="ficha-valor-vazio"></span>
+        </div>
+        <div class="ficha-linha">
+          <span class="ficha-label">BOX:</span>
+          <span class="ficha-valor-vazio"></span>
+        </div>
+        <div class="ficha-assinatura">
+          <div class="linha-assinatura"></div>
+          <div class="legenda-assinatura">Assinatura do Motorista</div>
+        </div>
+      </div>
+
+      <div class="painel-3-layout">
+        <div class="col-info-motorista"></div>
+        <div class="col-cargas">
+          <table class="ordem-tabela">
+            <thead>
+              <tr>
+                <th rowspan="2" style="width:22px;">#</th>
+                <th class="grupo" colspan="8">DADOS CARGA</th>
+                <th class="grupo" colspan="6">LOCAL DA CARGA</th>
+              </tr>
+              <tr>
+                <th>Nº Carga</th><th>CD Exp.</th><th>Destino</th><th>Região</th><th>Ent</th><th>Valor</th><th>Peso</th><th>Vol</th>
+                <th>Box</th><th>Rua</th><th>Prédio</th><th>Pallet</th><th>Chep</th><th>Obs.</th>
+              </tr>
+            </thead>
+            <tbody>${linhasHtml}</tbody>
+          </table>
+          <div class="totais">
+            <span>Peso da Carga: <b>${somaPeso.toFixed(2)}</b></span>
+            <span>Vol da Carga: <b>${somaVol.toFixed(2)}</b></span>
+            <span>Vl da Carga: <b>${formatarMoeda(somaValor)}</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="carimbo-impressao ativo ${classeSelo}"><span class="carimbo-caixa">${textoCarimbo}</span></div>
+    </section>
+  `;
+}
+
+function montarDocumentoLote(paginas, data){
+  const cont = document.getElementById('impressao-lote');
+  cont.innerHTML = paginas.map(p => construirPaginaLote(p, data)).join('');
+}
+
+/* Ponto de entrada: busca as cargas de cada motorista selecionado, marca
+ * cada um como EMITIDO no backend (mesma ação usada na impressão
+ * individual) e, ao final, monta um único documento e abre a impressão —
+ * de onde dá para "Salvar como PDF" com todas as ordens de uma vez. */
+async function iniciarImpressaoLote(){
+  const selecionados = obterMotoristasSelecionados();
+  if (!selecionados.length){
+    alert('Selecione ao menos um motorista para imprimir em lote.');
+    return;
+  }
+
+  const confirmar = confirm(
+    'Isso vai marcar como EMITIDAS as cargas de ' + selecionados.length + ' motorista(s) ' +
+    'e preparar a impressão de todas as Ordens de Carregamento em um único documento.\n\n' +
+    'Deseja continuar?'
+  );
+  if (!confirmar) return;
+
+  const data = estado.data;
+  mostrarOverlayLote(true, selecionados.length);
+
+  const paginas = [];
+  const erros = [];
+
+  for (let i = 0; i < selecionados.length; i++){
+    const motorista = selecionados[i];
+    atualizarProgressoLote(i, selecionados.length, 'Processando ' + motorista);
+    try {
+      const respCargas = await fetchJSON(
+        API_URL + '?action=getCargasPorData&data=' + encodeURIComponent(data) + '&motorista=' + encodeURIComponent(motorista)
+      );
+      const cargas = respCargas.cargas || [];
+      if (!cargas.length){
+        erros.push(motorista + ': nenhuma carga encontrada.');
+        continue;
+      }
+      const linhas = cargas.map(c => c.linha);
+
+      const respMarcar = await fetchJSON(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ acao: 'marcarEmitido', linhas, data, motorista })
+      });
+      if (!respMarcar.ok) throw new Error(respMarcar.erro || 'Falha ao marcar como emitido.');
+
+      paginas.push({ motorista, cargas, resultado: respMarcar.resultado });
+    } catch (err) {
+      erros.push(motorista + ': ' + err.message);
+    }
+  }
+
+  atualizarProgressoLote(selecionados.length, selecionados.length, 'Montando documento');
+
+  if (!paginas.length){
+    mostrarOverlayLote(false);
+    alert('Nenhuma ordem pôde ser gerada.\n\n' + erros.join('\n'));
+    return;
+  }
+
+  montarDocumentoLote(paginas, data);
+  mostrarOverlayLote(false);
+
+  if (erros.length){
+    alert(
+      'Atenção: ' + erros.length + ' motorista(s) NÃO foram incluídos no lote (verifique manualmente):\n\n' +
+      erros.join('\n')
+    );
+  }
+
+  // as cargas processadas mudaram de status: invalida os caches para que,
+  // ao fechar a impressão, a tela volte a bater com o servidor
+  invalidarCache('datas');
+  invalidarCache('motoristas:' + data);
+  paginas.forEach(p => invalidarCache('cargas:' + data + '|' + p.motorista));
+
+  document.getElementById('impressao-lote').classList.add('ativo');
+  // pequena espera para o navegador aplicar o layout antes de abrir a caixa de impressão
+  setTimeout(() => window.print(), 200);
+}
+
+// Depois que a caixa de impressão fecha (imprimiu ou cancelou), limpa o
+// documento de lote da tela e atualiza a lista de motoristas para refletir
+// os novos status (emitido/pendente, contagem de impressões etc.)
+window.addEventListener('afterprint', function(){
+  const cont = document.getElementById('impressao-lote');
+  if (cont && cont.classList.contains('ativo')) {
+    cont.classList.remove('ativo');
+    cont.innerHTML = '';
+    if (estado.data && !document.getElementById('tela2').classList.contains('oculto')) {
+      carregarMotoristasEGeral(estado.data, { forcar: true });
+    }
+  }
+});
 
 /* ---------------- TELA 3: ordem de carregamento ---------------- */
 function carregarOrdemMotorista(data, motorista){
@@ -1021,28 +1355,7 @@ function aplicarOrdem(resp){
 }
 
 function renderizarOrdem(){
-  const linhas = estado.cargas || [];
-  const totalLinhas = Math.max(linhas.length, 15); // sempre mostra ao menos 15 linhas, como o modelo impresso
-  let html = '';
-  let somaPeso = 0, somaVol = 0, somaValor = 0;
-
-  for (let i = 0; i < totalLinhas; i++){
-    const c = linhas[i];
-    if (c) {
-      somaPeso += c.peso; somaVol += c.vol; somaValor += c.valor;
-      html += `
-        <tr>
-          <td>${i+1}</td>
-          <td>${c.carga}</td><td>${c.filial || ''}</td><td>${c.destino}</td><td>${c.regiao}</td><td>${c.ent ?? ''}</td>
-          <td>${formatarMoeda(c.valor)}</td><td>${c.peso}</td><td>${c.vol}</td>
-          <td>${c.box || ''}</td><td>${c.rua || ''}</td><td>${c.predio || ''}</td>
-          <td>${c.pallet || ''}</td><td>${c.chep || ''}</td><td>${c.obs || ''}</td>
-        </tr>`;
-    } else {
-      html += `<tr><td>${i+1}</td>${'<td>&nbsp;</td>'.repeat(14)}</tr>`;
-    }
-  }
-
+  const { html, somaPeso, somaVol, somaValor } = construirLinhasTabela(estado.cargas);
   document.getElementById('corpo-ordem').innerHTML = html;
   document.getElementById('total-peso').textContent = somaPeso.toFixed(2);
   document.getElementById('total-vol').textContent = somaVol.toFixed(2);
