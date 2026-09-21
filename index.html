@@ -169,23 +169,59 @@
   .card-motorista .status-dot.ok{background:var(--verde);box-shadow:0 0 6px rgba(24,128,56,.5);}
   .card-motorista .status-dot.pend{background:#9aa0a6;}
 
-  /* Card totalmente EMITIDO — verde claro metálico */
-  .card-motorista.status-ok{
-    border-left-color:#0f9d58;
-    background:linear-gradient(120deg,#f2fff6 0%,#d3f5df 22%,#eafcf1 38%,#bdeecb 52%,#eafcf1 68%,#d3f5df 84%,#f2fff6 100%);
-  }
-  .card-motorista.status-ok:hover{border-color:#0f9d58;box-shadow:0 10px 22px rgba(15,157,88,.22);}
-  .card-motorista.status-ok .status-dot.ok{background:#0f9d58;box-shadow:0 0 6px rgba(15,157,88,.6);}
-  .card-motorista.status-ok .status-linha{border-top-color:rgba(15,157,88,.25);}
+  /* ---------- Cores do card por situação (definidas pela operação) ----------
+     Tudo pronto (todas "Carga Finalizada", ordem ainda não impressa) .. Aqua  #00FFFF
+     Ordem de Carregamento impressa (todas EMITIDAS) .................. Lime  #00FF00
+     Cargas pendentes (alguma sem "Carga Finalizada" — cadeado) ....... Red   #FF0000
+     Texto sempre escuro: é o que mantém boa leitura sobre o vermelho puro. */
+  .card-motorista.card-cor{color:#111;border-color:rgba(0,0,0,.22);}
+  .card-motorista.card-cor .nome .icon,
+  .card-motorista.card-cor .linha-info .icon{color:#111;}
+  .card-motorista.card-cor .linha-info{color:#111;}
+  .card-motorista.card-cor .linha-info b{color:#000;}
+  .card-motorista.card-cor .status-linha{border-top:1px dashed rgba(0,0,0,.3);}
+  .card-motorista.card-cor .status-dot{box-sizing:border-box;width:9px;height:9px;box-shadow:none;}
+  .card-motorista.card-cor .status-dot.ok{background:#111;}
+  .card-motorista.card-cor .status-dot.pend{background:transparent;border:2px solid #111;}
 
-  /* Card com cargas PENDENTES de emissão — dourado */
-  .card-motorista.status-pend{
-    border-left-color:#c9971c;
-    background:linear-gradient(120deg,#fffbf0 0%,#fbe8ad 22%,#fff6dd 38%,#f5d675 52%,#fff6dd 68%,#fbe8ad 84%,#fffbf0 100%);
+  .card-motorista.st-pronto{
+    border-left:5px solid #00A3A3;
+    background:linear-gradient(120deg,#00FFFF 0%,#9CFFFF 22%,#00FFFF 40%,#00FFFF 60%,#9CFFFF 78%,#00FFFF 100%);
   }
-  .card-motorista.status-pend:hover{border-color:#c9971c;box-shadow:0 10px 22px rgba(201,151,28,.22);}
-  .card-motorista.status-pend .status-dot.pend{background:#c9971c;box-shadow:0 0 6px rgba(201,151,28,.55);}
-  .card-motorista.status-pend .status-linha{border-top-color:rgba(201,151,28,.3);}
+  .card-motorista.st-pronto:hover{border-color:#00A3A3;box-shadow:0 10px 22px rgba(0,255,255,.45);}
+
+  .card-motorista.st-impresso{
+    border-left:5px solid #00A300;
+    background:linear-gradient(120deg,#00FF00 0%,#A6FFA6 22%,#00FF00 40%,#00FF00 60%,#A6FFA6 78%,#00FF00 100%);
+  }
+  .card-motorista.st-impresso:hover{border-color:#00A300;box-shadow:0 10px 22px rgba(0,255,0,.42);}
+
+  .card-motorista.st-pendente{
+    border-left:5px solid #A30000;
+    background:linear-gradient(120deg,#FF0000 0%,#FF8A8A 22%,#FF0000 40%,#FF0000 60%,#FF8A8A 78%,#FF0000 100%);
+  }
+  .card-motorista.st-pendente:hover{border-color:#A30000;box-shadow:0 10px 22px rgba(255,0,0,.4);}
+
+  /* Legenda das cores (barra de lote) */
+  .legenda-cores{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12px;color:var(--cinza-texto);}
+  .legenda-cores span{display:inline-flex;align-items:center;gap:6px;}
+  .legenda-cores i{display:inline-block;width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,.35);}
+
+  /* Cadeado no lugar da caixa de seleção: carga ainda não finalizada, sem impressão em lote */
+  .selo-bloqueado{position:absolute;top:8px;right:8px;z-index:2;color:#111;background:#fff;border:1px solid rgba(0,0,0,.35);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:not-allowed;}
+  .selo-bloqueado .icon{width:14px;height:14px;}
+
+  /* Tela 3: ordem bloqueada (carga sem "Carga Finalizada") */
+  .aviso-bloqueio-ordem{
+    margin:14px 0 4px;padding:12px 14px;border-radius:8px;font-size:13px;font-weight:600;line-height:1.45;
+    background:#FF0000;color:#111;border:2px solid #A30000;
+  }
+  .aviso-bloqueio-ordem.oculto{display:none;}
+  .aviso-bloqueio-ordem small{display:block;font-weight:500;margin-top:4px;}
+
+  /* Aviso na barra de lote (ex.: Apps Script ainda não envia o Status da Carga) */
+  .aviso-status-carga{flex-basis:100%;font-size:12px;color:#b3261e;background:#fdecea;border:1px solid #f5c2be;border-radius:6px;padding:7px 10px;}
+  .aviso-status-carga.oculto{display:none;}
 
 
   /* ---------- Barra de impressão em lote (Tela 2) ---------- */
@@ -322,6 +358,14 @@
     #tela1, #tela2, .toolbar, .btn-imprimir, .btn-voltar, .breadcrumb, .marca-hero, .subtitulo, #config-alerta,
     .barra-lote, .selecao-cb-wrap, #overlay-lote { display:none !important; }
     .card{border:none;padding:0;}
+
+    /* Ordem bloqueada (carga não finalizada): nem Ctrl+P imprime a ordem —
+       sai só o aviso de bloqueio. */
+    #tela3.ordem-bloqueada .ordem-header,
+    #tela3.ordem-bloqueada .ficha-manual-print,
+    #tela3.ordem-bloqueada .painel-3-layout,
+    #tela3.ordem-bloqueada .carimbo-impressao{display:none !important;}
+    #tela3.ordem-bloqueada .aviso-bloqueio-ordem{display:block;font-size:16px;padding:16px;}
 
     /* título destacado e centralizado */
     .ordem-header{display:block;text-align:center;margin-bottom:6px;}
@@ -506,13 +550,19 @@
   <div class="barra-lote">
     <label class="chk-todos">
       <input type="checkbox" id="chk-todos" onchange="alternarSelecaoTodos(this.checked)">
-      Selecionar todos
+      Selecionar todas as finalizadas
     </label>
     <span id="contagem-selecionados">0 selecionados</span>
     <button type="button" class="btn-lote-imprimir" id="btn-lote-imprimir" onclick="iniciarImpressaoLote()" disabled>
       <svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1"/><path d="M6 17h12v4H6z"/></svg>
       Gerar PDF / Imprimir selecionados
     </button>
+    <div class="legenda-cores">
+      <span><i style="background:#00FFFF"></i>Tudo pronto</span>
+      <span><i style="background:#00FF00"></i>Ordem de Carregamento impressa</span>
+      <span><i style="background:#FF0000"></i>Cargas pendentes (cadeado — não gera ordem)</span>
+    </div>
+    <div class="aviso-status-carga oculto" id="aviso-status-carga"></div>
   </div>
 
   <div class="grid-motoristas" id="grid-motoristas"></div>
@@ -536,6 +586,9 @@
       <span class="selo-via oculto" id="selo-via"></span>
     </div>
   </div>
+
+  <!-- Aviso de bloqueio: aparece quando há carga sem o status "Carga Finalizada" -->
+  <div class="aviso-bloqueio-ordem oculto" id="aviso-bloqueio-ordem" role="alert"></div>
 
   <!-- Ficha manuscrita (aparece SOMENTE na impressão), no formato da imagem de referência -->
   <div class="ficha-manual-print">
@@ -1003,21 +1056,69 @@ function carregarMotoristasEGeral(data, opcoes){
     });
 }
 
+/* =========================================================
+ * STATUS DA CARGA — Planilha Carregamento › aba Expedição › coluna T
+ * ---------------------------------------------------------
+ * A impressão em lote só é liberada para motoristas cujas cargas estão
+ * TODAS com o status "Carga Finalizada". O Apps Script precisa enviar:
+ *   - getCargasPorData     → cada carga com  statusCarga  (texto da coluna T)
+ *   - getMotoristasPorData → cada motorista com  qtdFinalizadas  (nº de
+ *                            cargas com coluna T = "Carga Finalizada")
+ * A comparação ignora maiúsculas/minúsculas, acentos e espaços extras.
+ * ========================================================= */
+const STATUS_CARGA_FINALIZADA = 'carga finalizada';
+
+function normalizarStatus(s){
+  return String(s == null ? '' : s)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ').trim().toLowerCase();
+}
+function cargaFinalizada(c){
+  return !!c && normalizarStatus(c.statusCarga) === STATUS_CARGA_FINALIZADA;
+}
+function motoristaFinalizado(m){
+  const total = Number(m.qtdCargas) || 0;
+  return total > 0 && Number(m.qtdFinalizadas) === total;
+}
+
 function renderMotoristas(resp, data){
   const grid = document.getElementById('grid-motoristas');
+  const aviso = document.getElementById('aviso-status-carga');
   if (!resp || !resp.motoristas || !resp.motoristas.length) {
     grid.innerHTML = '<div>Nenhum motorista nesta data.</div>';
+    if (aviso) aviso.classList.add('oculto');
     return;
   }
+
+  // se o backend ainda não envia o status (campo ausente), nenhum motorista
+  // pode ser liberado — e o usuário precisa saber o porquê
+  const backendSemStatus = resp.motoristas.some(m => m.qtdFinalizadas === undefined);
+  if (aviso) {
+    aviso.classList.toggle('oculto', !backendSemStatus);
+    if (backendSemStatus) {
+      aviso.textContent = 'O Apps Script não está enviando o Status da Carga (aba Expedição, coluna T). ' +
+        'Atualize o script e publique uma nova versão para liberar a impressão em lote.';
+    }
+  }
+
   grid.innerHTML = resp.motoristas.map(m => {
         const nomeEsc = (m.motorista || '').replace(/'/g,"\\'");
         const tudoEmitido = m.qtdEmitidas === m.qtdCargas && m.qtdCargas > 0;
+        const finalizado = motoristaFinalizado(m);
+        const qtdFin = Number(m.qtdFinalizadas) || 0;
+        // pendente (vermelho, com cadeado) > ordem impressa (lime) > tudo pronto (aqua)
+        const classeCard = !finalizado ? 'st-pendente' : (tudoEmitido ? 'st-impresso' : 'st-pronto');
+        const seletor = finalizado
+          ? `<label class="selecao-cb-wrap" onclick="event.stopPropagation()" title="Selecionar para impressão em lote">
+               <input type="checkbox" class="cb-motorista" data-motorista="${nomeEsc}" onchange="atualizarContagemSelecionados()">
+             </label>`
+          : `<span class="selo-bloqueado" title="Bloqueado: só gera Ordem de Carregamento com todas as cargas em Carga Finalizada (${qtdFin} de ${m.qtdCargas} finalizadas)">
+               <svg class="icon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+             </span>`;
         return `
-        <div class="card-motorista ${tudoEmitido ? 'status-ok' : 'status-pend'}" onclick="irParaTela3('${nomeEsc}')"
+        <div class="card-motorista card-cor ${classeCard}" onclick="irParaTela3('${nomeEsc}')"
              onmouseenter="prefetchOrdem('${nomeEsc}')" onpointerdown="prefetchOrdem('${nomeEsc}')">
-          <label class="selecao-cb-wrap" onclick="event.stopPropagation()" title="Selecionar para impressão em lote">
-            <input type="checkbox" class="cb-motorista" data-motorista="${nomeEsc}" onchange="atualizarContagemSelecionados()">
-          </label>
+          ${seletor}
           <div class="nome">
             <svg class="icon" viewBox="0 0 24 24"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7.5" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>
             ${m.motorista || '(sem nome)'}
@@ -1033,6 +1134,10 @@ function renderMotoristas(resp, data){
           <div class="linha-info">
             <span class="rotulo"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Vol total</span>
             <b>${m.totalVol.toFixed(2)}</b>
+          </div>
+          <div class="linha-info">
+            <span class="rotulo"><svg class="icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>Finalizadas</span>
+            <b>${qtdFin}/${m.qtdCargas}</b>
           </div>
           <div class="status-linha">
             <span class="status-dot ${tudoEmitido ? 'ok' : 'pend'}"></span>
@@ -1054,6 +1159,8 @@ function renderMotoristas(resp, data){
  * IMPRESSÃO EM LOTE — gera e imprime, em um único PDF, a Ordem de
  * Carregamento de vários motoristas de uma vez (Tela 2), marcando cada um
  * como EMITIDO exatamente como acontece na impressão individual (Tela 3).
+ * REGRA: só entram no lote motoristas cujas cargas estão todas com status
+ * "Carga Finalizada" (aba Expedição, coluna T) — ver STATUS DA CARGA acima.
  * A impressão de uma ordem específica continua disponível normalmente,
  * clicando no card do motorista (Tela 3) e usando "Imprimir Ordem".
  * ========================================================= */
@@ -1066,13 +1173,20 @@ function obterMotoristasSelecionados(){
 function atualizarContagemSelecionados(){
   const total = document.querySelectorAll('.cb-motorista').length;
   const selecionados = document.querySelectorAll('.cb-motorista:checked').length;
+  const bloqueados = document.querySelectorAll('.selo-bloqueado').length;
   const rotulo = document.getElementById('contagem-selecionados');
   const btn = document.getElementById('btn-lote-imprimir');
-  if (rotulo) rotulo.textContent = selecionados + ' de ' + total + ' selecionados';
+  if (rotulo) {
+    rotulo.textContent = selecionados + ' de ' + total + ' selecionados' +
+      (bloqueados ? ' (' + bloqueados + ' aguardando finalização)' : '');
+  }
   if (btn) btn.disabled = selecionados === 0;
 
   const chkTodos = document.getElementById('chk-todos');
-  if (chkTodos) chkTodos.checked = (total > 0 && selecionados === total);
+  if (chkTodos) {
+    chkTodos.disabled = total === 0;   // nenhuma carga finalizada nesta data
+    chkTodos.checked = (total > 0 && selecionados === total);
+  }
 }
 
 function alternarSelecaoTodos(marcar){
@@ -1225,7 +1339,8 @@ async function iniciarImpressaoLote(){
 
   const confirmar = confirm(
     'Isso vai marcar como EMITIDAS as cargas de ' + selecionados.length + ' motorista(s) ' +
-    'e preparar a impressão de todas as Ordens de Carregamento em um único documento.\n\n' +
+    'e preparar a impressão de todas as Ordens de Carregamento em um único documento.\n' +
+    '(Somente cargas com status "Carga Finalizada" são incluídas.)\n\n' +
     'Deseja continuar?'
   );
   if (!confirmar) return;
@@ -1246,6 +1361,15 @@ async function iniciarImpressaoLote(){
       const cargas = respCargas.cargas || [];
       if (!cargas.length){
         erros.push(motorista + ': nenhuma carga encontrada.');
+        continue;
+      }
+      // trava de segurança: a lista da tela pode estar desatualizada, então o
+      // status é conferido de novo nos dados recém-buscados. Nada é marcado
+      // como EMITIDO nem impresso se houver carga fora de "Carga Finalizada".
+      const naoFinalizadas = cargas.filter(c => !cargaFinalizada(c));
+      if (naoFinalizadas.length){
+        erros.push(motorista + ': ' + naoFinalizadas.length + ' de ' + cargas.length +
+          ' carga(s) sem o status "Carga Finalizada" — não incluído.');
         continue;
       }
       const linhas = cargas.map(c => c.linha);
@@ -1317,6 +1441,8 @@ function carregarOrdemMotorista(data, motorista){
   document.getElementById('mensagem-impressao').textContent = '';
   document.getElementById('meta-datahora').textContent = '—';
   document.getElementById('meta-numcontrole').textContent = '—';
+  estado.cargas = [];                 // não reaproveita as cargas do motorista anterior
+  atualizarBloqueioImpressao();
   document.getElementById('corpo-ordem').innerHTML = '<tr><td colspan="15">Carregando...</td></tr>';
   document.getElementById('selo-via').className = 'selo-via oculto';
   document.getElementById('carimbo-impressao').className = 'carimbo-impressao';
@@ -1341,6 +1467,7 @@ function carregarOrdemMotorista(data, motorista){
 function aplicarOrdem(resp){
   estado.cargas = resp.cargas || [];
   renderizarOrdem();
+  atualizarBloqueioImpressao();
 
   // se já estava tudo emitido antes, mostra os dados da 1ª emissão
   const jaEmitido = estado.cargas.find(c => c.statusImpressao === 'EMITIDO');
@@ -1352,6 +1479,36 @@ function aplicarOrdem(resp){
   const maiorQtdImpressoes = estado.cargas.reduce((max, c) => Math.max(max, c.qtdImpressoes || 0), 0);
   document.getElementById('selo-via').classList.remove('oculto');
   atualizarSeloVia('preview', { qtdImpressoes: maiorQtdImpressoes });
+}
+
+/* ---------------- Bloqueio (cadeado): só gera ordem com TODAS as cargas em "Carga Finalizada" ----------------
+ * Desabilita o botão Imprimir, mostra o aviso (com as cargas pendentes) e, via
+ * classe ordem-bloqueada, impede que a ordem saia em Ctrl+P. */
+function atualizarBloqueioImpressao(){
+  const cargas = estado.cargas || [];
+  const pendentes = cargas.filter(c => !cargaFinalizada(c));
+  const bloqueada = pendentes.length > 0;
+
+  const tela = document.getElementById('tela3');
+  const aviso = document.getElementById('aviso-bloqueio-ordem');
+  const btn = document.getElementById('btn-imprimir');
+
+  tela.classList.toggle('ordem-bloqueada', bloqueada);
+  aviso.classList.toggle('oculto', !bloqueada);
+  if (bloqueada) {
+    aviso.textContent = '🔒 Ordem de Carregamento bloqueada: ' + pendentes.length + ' de ' + cargas.length +
+      ' carga(s) ainda não estão com o status "Carga Finalizada". A ordem só é liberada quando todas forem finalizadas.';
+    const detalhe = document.createElement('small');
+    detalhe.textContent = 'Pendentes: ' + pendentes.map(c =>
+      (c.carga || '?') + ' (' + (String(c.statusCarga || '').trim() || 'sem status') + ')').join(', ');
+    aviso.appendChild(detalhe);
+  } else {
+    aviso.textContent = '';
+  }
+  if (btn) {
+    btn.disabled = bloqueada;
+    btn.title = bloqueada ? 'Bloqueado: há carga sem o status Carga Finalizada' : '';
+  }
 }
 
 function renderizarOrdem(){
@@ -1417,6 +1574,15 @@ document.getElementById('btn-imprimir').addEventListener('click', function(){
     return;
   }
 
+  // cadeado: nunca gera ordem com carga fora de "Carga Finalizada"
+  const pendentes = (estado.cargas || []).filter(c => !cargaFinalizada(c));
+  if (pendentes.length){
+    atualizarBloqueioImpressao();
+    msg.textContent = '🔒 Bloqueado: ' + pendentes.length + ' carga(s) sem o status "Carga Finalizada".';
+    msg.style.color = 'var(--vermelho)';
+    return;
+  }
+
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Gerando...';
 
@@ -1456,7 +1622,7 @@ document.getElementById('btn-imprimir').addEventListener('click', function(){
       msg.style.color = 'var(--vermelho)';
     })
     .finally(() => {
-      btn.disabled = false;
+      atualizarBloqueioImpressao();   // reabilita só se continuar liberada
       btn.innerHTML = '<svg class="icon" viewBox="0 0 24 24"><path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1"/><path d="M6 17h12v4H6z"/></svg> Imprimir Ordem de Carregamento';
     });
 });
